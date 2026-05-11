@@ -39,13 +39,25 @@ class FirebaseAuthMiddleware
         }
 
         try {
-            $credentialsPath = base_path(env('FIREBASE_CREDENTIALS', 'firebase_credentials.json'));
+            // ── Load credentials from env var (production) or file (local) ──
+            $credentialsJsonBase64 = env('FIREBASE_CREDENTIALS_JSON');
 
-            if (!file_exists($credentialsPath)) {
-                return response()->json(['error' => 'Firebase credentials file not found. Please add firebase_credentials.json to the backend root.'], 500);
+            if ($credentialsJsonBase64) {
+                // Production: credentials provided as base64-encoded JSON string
+                $serviceAccount = json_decode(base64_decode($credentialsJsonBase64), true);
+                if (!$serviceAccount) {
+                    return response()->json(['error' => 'Invalid FIREBASE_CREDENTIALS_JSON environment variable.'], 500);
+                }
+                $factory = (new \Kreait\Firebase\Factory)->withServiceAccount($serviceAccount);
+            } else {
+                // Local: credentials provided as a file path
+                $credentialsPath = base_path(env('FIREBASE_CREDENTIALS', 'firebase_credentials.json'));
+                if (!file_exists($credentialsPath)) {
+                    return response()->json(['error' => 'Firebase credentials not found. Set FIREBASE_CREDENTIALS_JSON env var or add firebase_credentials.json to backend root.'], 500);
+                }
+                $factory = (new \Kreait\Firebase\Factory)->withServiceAccount($credentialsPath);
             }
 
-            $factory = (new \Kreait\Firebase\Factory)->withServiceAccount($credentialsPath);
             $auth = $factory->createAuth();
             $verifiedIdToken = $auth->verifyIdToken($token);
             $uid = $verifiedIdToken->claims()->get('sub');
