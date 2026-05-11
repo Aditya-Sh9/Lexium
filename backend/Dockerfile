@@ -1,5 +1,5 @@
 # ─── Stage: Production Laravel + Apache ───────────────────────────────
-FROM php:8.3-apache
+FROM php:8.4-apache
 
 # Install system dependencies
 RUN apt-get update && apt-get install -y \
