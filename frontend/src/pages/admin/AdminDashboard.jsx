@@ -1,23 +1,28 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router';
-import { Users, UserCheck, Clock, Calendar, FileText, TrendingUp, ChevronRight, Trophy, Star, Award, MapPin, Briefcase, UserX } from 'lucide-react';
+import { Users, UserCheck, Clock, Calendar, FileText, TrendingUp, ChevronRight, Trophy, Star, Award, MapPin, Briefcase, UserX, Lock } from 'lucide-react';
 import { themeToast, themeAlert } from '../../utils/alert';
+import { formatRupees } from '../../utils/formatters';
 
 const API = import.meta.env.VITE_API_URL || 'http://localhost:8000/api';
 
 export default function AdminDashboard() {
   const [data, setData] = useState(null);
+  const [escrow, setEscrow] = useState({ totalHeld: 0, releasable: 0, count: 0 });
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(null);
   const token = localStorage.getItem('admin_token');
 
   const fetchDashboard = () => {
     setLoading(true);
-    fetch(`${API}/admin/dashboard`, {
-      headers: { Authorization: `Bearer ${token}` },
-    })
-      .then(r => r.json())
-      .then(setData)
+    Promise.all([
+      fetch(`${API}/admin/dashboard`,    { headers: { Authorization: `Bearer ${token}` } }).then(r => r.json()),
+      fetch(`${API}/admin/escrow`,       { headers: { Authorization: `Bearer ${token}` } }).then(r => r.json()).catch(() => null),
+    ])
+      .then(([d, e]) => {
+        setData(d);
+        if (e?.summary) setEscrow(e.summary);
+      })
       .catch(console.error)
       .finally(() => setLoading(false));
   };
@@ -290,6 +295,30 @@ export default function AdminDashboard() {
           </div>
         ))}
       </div>
+
+      {/* Escrow snapshot — quick funnel from dashboard to escrow management */}
+      <Link
+        to="/admin/escrow"
+        className={`mt-6 block rounded-xl border p-5 shadow-sm hover:shadow-md transition-all group ${escrow.releasable > 0 ? 'bg-amber-50 border-amber-200' : 'bg-white border-surface-200'}`}
+      >
+        <div className="flex items-center justify-between gap-4 flex-wrap">
+          <div className="flex items-center gap-4">
+            <div className={`w-12 h-12 rounded-lg flex items-center justify-center ${escrow.releasable > 0 ? 'bg-amber-100 text-amber-700' : 'bg-surface-100 text-surface-500'}`}>
+              <Lock size={22} />
+            </div>
+            <div>
+              <p className="font-heading text-lg text-surface-900">Escrow Management</p>
+              <p className="font-sans text-sm text-surface-600">
+                <strong>{formatRupees(escrow.totalHeld, { emptyDash: false })}</strong> held across {escrow.count} transaction{escrow.count !== 1 ? 's' : ''}
+                {escrow.releasable > 0 && <> · <span className="text-amber-700 font-semibold">{escrow.releasable} ready to release</span></>}
+              </p>
+            </div>
+          </div>
+          <span className="text-xs font-bold uppercase tracking-widest text-primary-700 flex items-center gap-1 group-hover:underline">
+            Review escrow <ChevronRight size={14} />
+          </span>
+        </div>
+      </Link>
     </div>
   );
 }

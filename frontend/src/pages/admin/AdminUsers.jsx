@@ -2,8 +2,9 @@ import { useState, useEffect } from 'react';
 import {
   Users, User, Briefcase, Shield, Search, Trash2,
   X, Star, Award, Trophy, TrendingUp, IndianRupee,
-  CheckCircle2, ShieldCheck, Gift
+  CheckCircle2, ShieldCheck, Gift, Lock
 } from 'lucide-react';
+import { formatRupees } from '../../utils/formatters';
 
 const API = import.meta.env.VITE_API_URL || 'http://localhost:8000/api';
 
@@ -132,14 +133,16 @@ function ProviderProfileModal({ userId, onClose }) {
                   <div className="space-y-3">
                     <div className="flex justify-between">
                       <span className="text-sm text-surface-600">Total Cleared</span>
-                      <span className="font-heading text-lg text-primary-900 flex items-center gap-0.5">
-                        <IndianRupee size={14} />{(stats.totalEarned || 0).toLocaleString('en-IN')}
+                      <span className="font-heading text-lg text-primary-900">
+                        {formatRupees(stats.totalEarned || 0, { emptyDash: false })}
                       </span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-sm text-surface-600">Pending Escrow</span>
-                      <span className="font-heading text-base text-surface-400 flex items-center gap-0.5">
-                        <IndianRupee size={13} />{(stats.pendingEscrow || 0).toLocaleString('en-IN')}
+                      <span className="text-sm text-surface-600 flex items-center gap-1">
+                        <Lock size={11} className="text-amber-600" /> Held in Escrow
+                      </span>
+                      <span className="font-heading text-base text-amber-700">
+                        {formatRupees(stats.heldInEscrow || stats.pendingEscrow || 0, { emptyDash: false })}
                       </span>
                     </div>
                   </div>
@@ -190,12 +193,16 @@ function ProviderProfileModal({ userId, onClose }) {
                             </td>
                             <td className="px-4 py-2.5 text-xs text-surface-400 whitespace-nowrap">{t.date}</td>
                             <td className="px-4 py-2.5 text-right">
-                              <span className={`text-xs font-bold px-2 py-0.5 rounded ${t.status === 'cleared' ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'}`}>
-                                {t.status}
+                              <span className={`text-xs font-bold px-2 py-0.5 rounded uppercase tracking-wider ${
+                                t.status === 'cleared' ? 'bg-green-100 text-green-700' :
+                                t.status === 'escrow'  ? 'bg-amber-100 text-amber-800' :
+                                'bg-yellow-100 text-yellow-700'
+                              }`}>
+                                {t.status === 'escrow' ? 'In Escrow' : t.status}
                               </span>
                             </td>
                             <td className="px-4 py-2.5 text-right font-heading text-primary-900 whitespace-nowrap">
-                              ₹{(t.amount || 0).toLocaleString('en-IN')}
+                              {formatRupees(t.amount, { emptyDash: false })}
                             </td>
                           </tr>
                         ))}

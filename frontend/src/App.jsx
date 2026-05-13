@@ -39,6 +39,7 @@ import CitizenHistory from './pages/citizen/CitizenHistory';
 import AdminDashboard from './pages/admin/AdminDashboard';
 import AdminProviders from './pages/admin/AdminProviders';
 import AdminUsers from './pages/admin/AdminUsers';
+import AdminEscrow from './pages/admin/AdminEscrow';
 
 
 // Smart redirect: /dashboard → role-specific dashboard
@@ -106,6 +107,7 @@ export default function App() {
               <Route path="dashboard" element={<AdminDashboard />} />
               <Route path="providers" element={<AdminProviders />} />
               <Route path="users" element={<AdminUsers />} />
+              <Route path="escrow" element={<AdminEscrow />} />
             </Route>
           </Route>
         </Route>

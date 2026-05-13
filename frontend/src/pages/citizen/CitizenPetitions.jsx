@@ -214,12 +214,17 @@ export default function CitizenPetitions() {
                         </div>
                       )}
 
-                      {/* Resolved case nudge to leave review */}
+                      {/* Resolved case — settlement-in-progress hint + review nudge */}
                       {petition.status === 'resolved' && (
-                        <Link to="/citizen/history" className="flex items-center gap-2 text-xs text-green-700 font-bold mb-3 px-1 hover:underline">
-                          <CheckCircle2 size={12} />
-                          Case resolved after consultation — leave a review in Case History →
-                        </Link>
+                        <div className="mb-3 px-1 space-y-1.5">
+                          <Link to="/citizen/history" className="flex items-center gap-2 text-xs text-green-700 font-bold hover:underline">
+                            <CheckCircle2 size={12} />
+                            Case resolved after consultation — leave a review in Case History →
+                          </Link>
+                          <p className="text-[11px] text-surface-500 italic flex items-center gap-1.5 pl-4">
+                            Administrative settlement in progress.
+                          </p>
+                        </div>
                       )}
 
                       {/* Provider notes (if any) */}

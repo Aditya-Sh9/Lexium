@@ -18,6 +18,9 @@ class SeedTestAccounts extends Command
 
     public function handle(): int
     {
+        $this->info('▶ Migrating legacy transaction statuses to escrow lifecycle...');
+        $this->migrateTransactionStatuses();
+
         $this->info('▶ Backfilling General Consultation service into existing providers...');
         $this->backfillGeneralConsultation();
 
@@ -80,6 +83,27 @@ class SeedTestAccounts extends Command
         );
 
         return self::SUCCESS;
+    }
+
+    // ── One-time data migration: pending/refunded → escrow ────────
+
+    private function migrateTransactionStatuses(): void
+    {
+        $pendingCount  = Transaction::where('status', 'pending')->count();
+        $refundedCount = Transaction::where('status', 'refunded')->count();
+
+        if ($pendingCount > 0) {
+            Transaction::where('status', 'pending')->update(['status' => 'escrow']);
+            $this->line("  Migrated $pendingCount 'pending' transaction(s) → escrow.");
+        }
+        if ($refundedCount > 0) {
+            // Refund flow has been removed from the platform. Drop legacy refunded rows.
+            Transaction::where('status', 'refunded')->delete();
+            $this->line("  Removed $refundedCount legacy 'refunded' transaction(s).");
+        }
+        if ($pendingCount === 0 && $refundedCount === 0) {
+            $this->line("  No legacy transactions to migrate.");
+        }
     }
 
     // ── Step 1: Backfill General Consultation ─────────────────────
@@ -354,13 +378,16 @@ class SeedTestAccounts extends Command
             'notes'         => 'Consultation linked to case ' . $p3->petition_id,
             'reviewed'      => false, // gives Sara something to review
         ]);
+        // Consultation completed but case is still IN-PROGRESS → funds held in escrow
         Transaction::create([
             'transaction_id' => 'TRX-2003',
             'provider_id'    => $pid,
             'client_name'    => $sara->name,
+            'petition_id'    => (string) $p3->_id,
+            'petition_code'  => $p3->petition_id,
             'type'           => 'Will Drafting',
             'amount'         => 2500,
-            'status'         => 'cleared',
+            'status'         => 'escrow',
             'date'           => now()->subDays(6)->toDateString(),
         ]);
 
@@ -399,14 +426,18 @@ class SeedTestAccounts extends Command
             'notes'         => 'Consultation linked to case ' . $p4->petition_id,
             'reviewed'      => true, // already reviewed
         ]);
+        // Case fully closed AND admin has released funds → cleared
         Transaction::create([
             'transaction_id' => 'TRX-2004',
             'provider_id'    => $pid,
             'client_name'    => $sara->name,
+            'petition_id'    => (string) $p4->_id,
+            'petition_code'  => $p4->petition_id,
             'type'           => 'General Consultation',
             'amount'         => 1500,
             'status'         => 'cleared',
             'date'           => now()->subDays(27)->toDateString(),
+            'released_at'    => now()->subDays(18)->toISOString(),
         ]);
 
         $this->line('  Seeded 4 petitions, 3 appointments, 2 transactions between Sara and Aditya.');

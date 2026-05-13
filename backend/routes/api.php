@@ -63,16 +63,20 @@ Route::middleware('firebase.auth')->group(function () {
 
 // ── Admin Routes (protected by admin token check) ────────────────
 Route::middleware([AdminAuthMiddleware::class])->prefix('admin')->group(function () {
-    Route::get('/dashboard',               [AdminController::class, 'dashboard']);
-    Route::get('/providers',               [AdminController::class, 'providers']);
-    Route::get('/providers/{id}/stats',    [AdminController::class, 'providerStats']);
-    Route::post('/providers/{id}/approve', [AdminController::class, 'approveProvider']);
-    Route::post('/providers/{id}/reject',  [AdminController::class, 'rejectProvider']);
-    Route::post('/providers/{id}/award',   [AdminController::class, 'awardProvider']);
-    Route::get('/users',                   [AdminController::class, 'users']);
-    Route::delete('/users/{id}',           [AdminController::class, 'deleteUser']);
-    Route::delete('/providers/{id}',       [AdminController::class, 'deleteProvider']);
-    Route::get('/leaderboard',             [AdminController::class, 'leaderboard']);
+    Route::get('/dashboard',                  [AdminController::class, 'dashboard']);
+    Route::get('/providers',                  [AdminController::class, 'providers']);
+    Route::get('/providers/{id}/stats',       [AdminController::class, 'providerStats']);
+    Route::post('/providers/{id}/approve',    [AdminController::class, 'approveProvider']);
+    Route::post('/providers/{id}/reject',     [AdminController::class, 'rejectProvider']);
+    Route::post('/providers/{id}/award',      [AdminController::class, 'awardProvider']);
+    Route::get('/users',                      [AdminController::class, 'users']);
+    Route::delete('/users/{id}',              [AdminController::class, 'deleteUser']);
+    Route::delete('/providers/{id}',          [AdminController::class, 'deleteProvider']);
+    Route::get('/leaderboard',                [AdminController::class, 'leaderboard']);
+
+    // Escrow management
+    Route::get('/escrow',                     [AdminController::class, 'escrowTransactions']);
+    Route::post('/transactions/{id}/release', [AdminController::class, 'releaseEscrow']);
 });
 
 // ── Public Leaderboard (accessible by provider dashboards) ───────

@@ -5,24 +5,7 @@ import RatingStars from '../../components/ui/RatingStars';
 import Badge from '../../components/ui/Badge';
 import api from '../../services/api';
 import { getInitials, formatDate } from '../../utils/helpers';
-
-// Format a price-like value with ₹ prefix unless it already has a currency symbol.
-function formatPrice(p) {
-  if (p === null || p === undefined || p === '') return '';
-  const s = String(p).trim();
-  if (/^[₹$€£¥]/.test(s)) return s;
-  return `₹${s}`;
-}
-
-// Format a duration: bare numbers become "N hours"; strings with time words pass through.
-function formatDuration(d) {
-  if (d === null || d === undefined || d === '') return '';
-  const s = String(d).trim();
-  if (/hour|hr|min|day|week/i.test(s)) return s;
-  const num = Number(s);
-  if (!Number.isFinite(num)) return s;
-  return num === 1 ? '1 hour' : `${num} hours`;
-}
+import { formatRupees, formatPriceRange, formatDuration } from '../../utils/formatters';
 
 export default function ProviderProfile() {
   const { id } = useParams();
@@ -111,7 +94,7 @@ export default function ProviderProfile() {
             {/* CTA */}
             <div className="shrink-0 text-center sm:text-right">
               <p className="text-sm text-surface-500 mb-1">Starting from</p>
-              <p className="text-xl font-bold text-surface-900 mb-3">{formatPrice(displayPriceRange) || '—'}</p>
+              <p className="text-xl font-bold text-surface-900 mb-3">{formatPriceRange(displayPriceRange, { emptyDash: true })}</p>
               <Link to={`/book/${provider._id || id}`} className="w-full sm:w-auto flex items-center justify-center gap-2 px-6 py-3 bg-primary-700 text-white font-semibold rounded-xl hover:bg-primary-800 active:scale-[0.98] transition-all cursor-pointer">
                 <FileText size={18} /> File a Case
               </Link>
@@ -162,7 +145,7 @@ export default function ProviderProfile() {
                     )}
                   </div>
                   <div className="text-right">
-                    <p className="font-bold text-surface-900">{formatPrice(s.price) || '—'}</p>
+                    <p className="font-bold text-surface-900">{formatRupees(s.price)}</p>
                     <Link to={bookHref} className="text-sm text-primary-600 font-medium hover:text-primary-700 mt-1 cursor-pointer">File a Case →</Link>
                   </div>
                 </div>

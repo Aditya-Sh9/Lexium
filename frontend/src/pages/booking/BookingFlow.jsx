@@ -3,6 +3,7 @@ import { useParams, useNavigate, useSearchParams, Link } from 'react-router';
 import { Calendar, Clock, ArrowLeft, CheckCircle, Briefcase, FileText, AlertCircle, ChevronDown, Sparkles, IndianRupee } from 'lucide-react';
 import api from '../../services/api';
 import { themeToast } from '../../utils/alert';
+import { formatRupees, parseAmount } from '../../utils/formatters';
 
 const URGENCY_OPTIONS = [
   { value: 'normal', label: 'Normal',  desc: 'Within a week is fine' },
@@ -11,20 +12,6 @@ const URGENCY_OPTIONS = [
 ];
 
 const TIME_SLOTS = ['10:00 AM', '11:30 AM', '02:00 PM', '03:30 PM', '05:00 PM'];
-
-// Parse a price-like value ("₹2,000", "2000", 2000) into a plain number.
-function parsePrice(p) {
-  if (p === null || p === undefined || p === '') return 0;
-  const cleaned = String(p).replace(/[^\d.]/g, '');
-  return cleaned ? Number(cleaned) : 0;
-}
-
-function formatPrice(p) {
-  if (p === null || p === undefined || p === '') return '';
-  const s = String(p).trim();
-  if (/^[₹$€£¥]/.test(s)) return s;
-  return `₹${s}`;
-}
 
 export default function BookingFlow() {
   const { providerId } = useParams();
@@ -60,8 +47,8 @@ export default function BookingFlow() {
     const list = (provider?.services || []).filter(s => s?.name);
     return list.map(s => ({
       name: s.name,
-      price: parsePrice(s.price),
-      priceLabel: formatPrice(s.price),
+      price: parseAmount(s.price),
+      priceLabel: formatRupees(s.price, { emptyDash: false }),
       duration: s.duration || '',
     }));
   }, [provider]);
@@ -164,7 +151,7 @@ export default function BookingFlow() {
               <div className="mb-6 flex items-start gap-3 p-3 bg-amber-50 border border-amber-200 rounded-lg">
                 <Sparkles size={16} className="text-amber-600 shrink-0 mt-0.5" />
                 <p className="text-sm text-amber-900">
-                  Filing under the service <strong>{presetService}</strong>{presetPrice ? ` (${formatPrice(presetPrice)})` : ''}. Switch via the dropdown if needed.
+                  Filing under the service <strong>{presetService}</strong>{presetPrice ? ` (${formatRupees(presetPrice, { emptyDash: false })})` : ''}. Switch via the dropdown if needed.
                 </p>
               </div>
             )}

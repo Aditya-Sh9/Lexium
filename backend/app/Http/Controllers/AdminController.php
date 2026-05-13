@@ -234,9 +234,9 @@ class AdminController extends Controller
 
         $pid = (string) $provider->_id;
 
-        $casesClosed   = Appointment::where('provider_id', $pid)->where('status', 'completed')->count();
+        $casesClosed   = Petition::where('provider_id', $pid)->whereIn('status', ['resolved', 'closed'])->count();
         $totalEarned   = Transaction::where('provider_id', $pid)->where('status', 'cleared')->sum('amount');
-        $pendingEscrow = Transaction::where('provider_id', $pid)->where('status', 'pending')->sum('amount');
+        $heldInEscrow  = Transaction::where('provider_id', $pid)->where('status', 'escrow')->sum('amount');
         $transactions  = Transaction::where('provider_id', $pid)->orderBy('created_at', 'desc')->limit(10)->get();
 
         // Compute actual badges
@@ -269,7 +269,7 @@ class AdminController extends Controller
             'provider'           => $provider,
             'casesClosed'        => $casesClosed,
             'totalEarned'        => $totalEarned,
-            'pendingEscrow'      => $pendingEscrow,
+            'heldInEscrow'       => $heldInEscrow,
             'recentTransactions' => $transactions,
             'badges'             => $badges,
             'tier'               => $tier,
@@ -305,6 +305,98 @@ class AdminController extends Controller
 
         return response()->json([
             'message' => "₹{$validated['amount']} awarded to {$provider->name} successfully.",
+        ]);
+    }
+
+    /**
+     * GET /admin/escrow
+     * Returns all escrow transactions enriched with linked-case status so the admin
+     * can decide whether release is allowed (only resolved/closed cases qualify).
+     */
+    public function escrowTransactions(Request $request)
+    {
+        $rows = Transaction::where('status', 'escrow')
+            ->orderBy('created_at', 'desc')
+            ->get()
+            ->map(function ($t) {
+                $petition = null;
+                if (!empty($t->petition_id)) {
+                    $petition = Petition::find($t->petition_id);
+                }
+                $appointment = null;
+                if (!empty($t->appointment_id)) {
+                    $appointment = Appointment::find($t->appointment_id);
+                }
+                $provider = Provider::find($t->provider_id);
+
+                $caseStatus = $petition->status ?? null;
+                $releasable = $caseStatus && in_array($caseStatus, ['resolved', 'closed'], true);
+
+                return [
+                    '_id'              => (string) $t->_id,
+                    'transaction_id'   => $t->transaction_id,
+                    'amount'           => (float) $t->amount,
+                    'type'             => $t->type,
+                    'date'             => $t->date,
+                    'client_name'      => $t->client_name,
+                    'provider_id'      => $t->provider_id,
+                    'provider_name'    => $provider->name ?? '—',
+                    'petition_id'      => $t->petition_id,
+                    'petition_code'    => $t->petition_code ?? ($petition->petition_id ?? null),
+                    'case_status'      => $caseStatus,
+                    'consultation_date'=> $appointment->date ?? null,
+                    'releasable'       => $releasable,
+                ];
+            });
+
+        $totalHeld    = $rows->sum('amount');
+        $releasable   = $rows->where('releasable', true)->count();
+        $blocked      = $rows->where('releasable', false)->count();
+
+        return response()->json([
+            'transactions' => $rows->values(),
+            'summary'      => [
+                'count'         => $rows->count(),
+                'totalHeld'     => $totalHeld,
+                'releasable'    => $releasable,
+                'blockedByCase' => $blocked,
+            ],
+        ]);
+    }
+
+    /**
+     * POST /admin/transactions/{id}/release
+     * Moves a transaction from escrow to cleared. Guarded: the linked case must
+     * be resolved or closed.
+     */
+    public function releaseEscrow(Request $request, $id)
+    {
+        $transaction = Transaction::find($id);
+        if (!$transaction) {
+            return response()->json(['error' => 'Transaction not found'], 404);
+        }
+        if ($transaction->status !== 'escrow') {
+            return response()->json(['error' => 'Only escrow transactions can be released.'], 422);
+        }
+
+        // Verify the linked case is resolved or closed before releasing funds.
+        if (!empty($transaction->petition_id)) {
+            $petition = Petition::find($transaction->petition_id);
+            if ($petition && !in_array($petition->status, ['resolved', 'closed'], true)) {
+                return response()->json([
+                    'error' => "Cannot release — case {$petition->petition_id} is still {$petition->status}. Funds can only be released after the provider resolves the case.",
+                ], 422);
+            }
+        }
+
+        $transaction->update([
+            'status'      => 'cleared',
+            'released_at' => now()->toISOString(),
+        ]);
+
+        return response()->json([
+            'message'     => 'Funds released to provider ledger.',
+            'transaction' => $transaction->fresh(),
         ]);
     }
 }

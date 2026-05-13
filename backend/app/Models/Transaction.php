@@ -13,10 +13,14 @@ class Transaction extends Model
         'transaction_id',     // Human-readable ID like TRX-9821
         'provider_id',
         'client_name',
+        'petition_id',        // Linked case (string ObjectId) — used by admin escrow release
+        'petition_code',      // Human-readable case code (PET-XXXX)
+        'appointment_id',     // Linked consultation that generated this transaction
         'type',               // Consultation Fee, Contract Review, etc.
         'amount',
-        'status',             // pending, cleared, refunded
+        'status',             // escrow | cleared
         'date',
+        'released_at',        // Timestamp when admin released escrow to cleared
     ];
 
     protected $casts = [

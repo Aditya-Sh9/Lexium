@@ -3,6 +3,7 @@ import { MapPin } from 'lucide-react';
 import RatingStars from './RatingStars';
 import Badge from './Badge';
 import { getInitials } from '../../utils/helpers';
+import { formatPriceRange } from '../../utils/formatters';
 
 /**
  * ProviderCard — displays a provider summary in listings
@@ -76,7 +77,7 @@ export default function ProviderCard({ provider }) {
 
       <div className="flex items-center justify-between pt-4 pillar-divider-horizontal">
         <span className="font-heading text-[18px] text-primary-900 font-bold">
-          {displayPrice}
+          {formatPriceRange(displayPrice, { emptyDash: true })}
           <span className="text-[12px] text-surface-500 font-sans font-normal"> /consultation</span>
         </span>
         <button className="bg-surface-50 text-primary-800 border border-primary-800 font-sans text-[12px] font-medium px-4 py-1.5 rounded hover:bg-primary-800 hover:text-white transition-colors cursor-pointer">

@@ -67,9 +67,9 @@ class ProviderController extends Controller
             ->whereIn('status', ['pending', 'confirmed', 'in-progress'])
             ->orderBy('date', 'asc')->limit(5)->get();
 
-        $pendingValue  = Transaction::where('provider_id', $pid)->where('status', 'pending')->sum('amount');
-        $clearedValue  = Transaction::where('provider_id', $pid)->where('status', 'cleared')->sum('amount');
-        $casesClosed   = Petition::where('provider_id', $pid)->whereIn('status', ['resolved', 'closed'])->count();
+        $escrowValue  = Transaction::where('provider_id', $pid)->where('status', 'escrow')->sum('amount');
+        $clearedValue = Transaction::where('provider_id', $pid)->where('status', 'cleared')->sum('amount');
+        $casesClosed  = Petition::where('provider_id', $pid)->whereIn('status', ['resolved', 'closed'])->count();
 
         // Count actually earned badges
         $badgesEarned = 0;
@@ -110,9 +110,9 @@ class ProviderController extends Controller
             'todayDocket'        => $todayDocket,
             'recentReviews'      => $recentReviews,
             'accruedValue'       => [
-                'pending'      => $pendingValue,
+                'escrow'       => $escrowValue,
                 'cleared'      => $clearedValue,
-                'monthlyTotal' => $pendingValue + $clearedValue,
+                'monthlyTotal' => $escrowValue + $clearedValue,
             ],
             'pathProgress' => ['casesClosed' => $casesClosed, 'proBono' => 0],
         ]);
@@ -145,9 +145,9 @@ class ProviderController extends Controller
         $pid = (string) $provider->_id;
 
         return response()->json([
-            'clearedValue'  => Transaction::where('provider_id', $pid)->where('status', 'cleared')->sum('amount'),
-            'pendingEscrow' => Transaction::where('provider_id', $pid)->where('status', 'pending')->sum('amount'),
-            'transactions'  => Transaction::where('provider_id', $pid)->orderBy('created_at', 'desc')->limit(50)->get(),
+            'clearedValue' => Transaction::where('provider_id', $pid)->where('status', 'cleared')->sum('amount'),
+            'escrowValue'  => Transaction::where('provider_id', $pid)->where('status', 'escrow')->sum('amount'),
+            'transactions' => Transaction::where('provider_id', $pid)->orderBy('created_at', 'desc')->limit(50)->get(),
         ]);
     }
 
@@ -399,6 +399,7 @@ class ProviderController extends Controller
 
         // Resolve transaction amount: linked petition's quoted_price > provider.consultation_fee > 0
         $amount = null;
+        $linkedPetition = null;
         if (!empty($appointment->petition_id)) {
             $linkedPetition = Petition::find($appointment->petition_id);
             if ($linkedPetition && $linkedPetition->quoted_price) {
@@ -409,13 +410,17 @@ class ProviderController extends Controller
             $amount = (float) ($provider->consultation_fee ?: 0);
         }
 
+        // Funds go into ESCROW — admin must release them after the case is resolved/closed.
         Transaction::create([
             'transaction_id' => 'TRX-' . rand(1000, 9999),
             'provider_id'    => (string) $provider->_id,
             'client_name'    => $appointment->citizen_name,
+            'petition_id'    => $linkedPetition ? (string) $linkedPetition->_id : ($appointment->petition_id ?? null),
+            'petition_code'  => $linkedPetition->petition_id ?? ($appointment->petition_code ?? null),
+            'appointment_id' => (string) $appointment->_id,
             'type'           => $appointment->type,
             'amount'         => $amount,
-            'status'         => 'cleared',
+            'status'         => 'escrow',
             'date'           => now()->toDateString(),
         ]);
 
@@ -447,7 +452,8 @@ class ProviderController extends Controller
 
     /**
      * DELETE /provider/transactions/{id}
-     * Remove a pending transaction (cleared transactions cannot be deleted).
+     * Providers cannot delete escrow or cleared transactions — those represent real funds.
+     * Only deletion of legacy/admin entries is permitted (status outside the escrow/cleared lifecycle).
      */
     public function deleteTransaction(Request $request, $id)
     {
@@ -459,6 +465,10 @@ class ProviderController extends Controller
             ->first();
 
         if (!$transaction) return response()->json(['error' => 'Transaction not found'], 404);
+
+        if (in_array($transaction->status, ['escrow', 'cleared'], true)) {
+            return response()->json(['error' => 'Escrow and cleared transactions cannot be removed.'], 422);
+        }
 
         $transaction->delete();
 

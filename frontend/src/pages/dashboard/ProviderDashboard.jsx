@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Calendar, Users, TrendingUp, Award, Clock, ShieldCheck, CheckCircle2, Star, Trophy, Briefcase, FileText } from 'lucide-react';
+import { formatRupees } from '../../utils/formatters';
 import { useAuth } from '../../context/AuthContext';
 import { Link, useNavigate } from 'react-router';
 import api from '../../services/api';
@@ -26,7 +27,7 @@ export default function ProviderDashboard() {
     badgesEarned: 0,
     leaderboardPosition: null,
     recentReviews: [],
-    accruedValue: { pending: 0, cleared: 0, monthlyTotal: 0 },
+    accruedValue: { escrow: 0, cleared: 0, monthlyTotal: 0 },
     pathProgress: { casesClosed: 0, proBono: 0 },
   });
   const [loading, setLoading] = useState(true);
@@ -46,7 +47,7 @@ export default function ProviderDashboard() {
           badgesEarned: res.badgesEarned || 0,
           leaderboardPosition: res.leaderboardPosition ?? null,
           recentReviews: res.recentReviews || [],
-          accruedValue: res.accruedValue || { pending: 0, cleared: 0, monthlyTotal: 0 },
+          accruedValue: res.accruedValue || { escrow: 0, cleared: 0, monthlyTotal: 0 },
           pathProgress: res.pathProgress || { casesClosed: 0, proBono: 0 },
         });
       })
@@ -240,21 +241,26 @@ export default function ProviderDashboard() {
             <h2 className="font-heading text-xl text-primary-900 mb-1 flex items-center gap-2">
               <TrendingUp className="text-accent-300" /> Accrued Earnings
             </h2>
-            <p className="font-sans text-xs text-surface-500 mb-6">Generated from completed consultations</p>
+            <p className="font-sans text-xs text-surface-500 mb-6">Funds tied to active legal matters &amp; cleared payouts</p>
 
             <div className="space-y-4">
               <div className="flex justify-between items-center">
                 <span className="text-sm text-surface-600">Cleared</span>
-                <span className="font-heading text-lg text-primary-900">₹{data.accruedValue.cleared.toLocaleString('en-IN')}</span>
+                <span className="font-heading text-lg text-primary-900">{formatRupees(data.accruedValue.cleared, { emptyDash: false })}</span>
               </div>
               <div className="flex justify-between items-center">
-                <span className="text-sm text-surface-600">Pending Escrow</span>
-                <span className="font-heading text-lg text-surface-400">₹{data.accruedValue.pending.toLocaleString('en-IN')}</span>
+                <span className="text-sm text-surface-600 flex items-center gap-1.5">
+                  Held in Escrow
+                </span>
+                <span className="font-heading text-lg text-amber-700">{formatRupees(data.accruedValue.escrow, { emptyDash: false })}</span>
               </div>
               <div className="border-t border-surface-200 pt-4 flex justify-between items-center">
                 <span className="text-sm font-bold text-surface-700">Total</span>
-                <span className="font-heading text-2xl text-primary-900">₹{data.accruedValue.monthlyTotal.toLocaleString('en-IN')}</span>
+                <span className="font-heading text-2xl text-primary-900">{formatRupees(data.accruedValue.monthlyTotal, { emptyDash: false })}</span>
               </div>
+              <p className="text-[11px] text-surface-500 leading-snug pt-1 border-t border-surface-100">
+                Escrow funds release to your cleared balance after the admin reviews each resolved case.
+              </p>
             </div>
 
             <button
