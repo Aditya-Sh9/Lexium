@@ -57,11 +57,13 @@ export default function App() {
     <BrowserRouter>
       <Toaster position="top-right" />
       <Routes>
+        {/* Auth pages — rendered without the global Navbar/Footer chrome */}
+        <Route path="/login" element={<Login />} />
+        <Route path="/register" element={<Register />} />
+
         <Route element={<MainLayout />}>
           {/* Public Routes */}
           <Route path="/" element={<Home />} />
-          <Route path="/login" element={<Login />} />
-          <Route path="/register" element={<Register />} />
           <Route path="/provider-onboarding" element={<ProviderOnboarding />} />
           <Route path="/pending-approval" element={<PendingApproval />} />
           <Route path="/rejected-application" element={<RejectedApplication />} />

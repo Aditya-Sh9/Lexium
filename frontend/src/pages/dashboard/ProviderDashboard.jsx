@@ -97,7 +97,7 @@ export default function ProviderDashboard() {
   const progressPct = Math.min((casesClosed / maxCases) * 100, 100);
 
   return (
-    <div className="max-w-[1920px] mx-auto p-6 md:p-12 pb-16 font-sans bg-transparent">
+    <div className="max-w-[1440px] mx-auto px-6 md:px-8 pt-6 pb-14 font-sans bg-transparent">
 
       {/* Header */}
       <motion.header
@@ -106,8 +106,8 @@ export default function ProviderDashboard() {
         className="mb-12 flex flex-col md:flex-row md:justify-between md:items-end border-b border-surface-200 pb-6 gap-6"
       >
         <div>
-          <h1 className="font-heading text-4xl text-primary-900">Practice Workspace</h1>
-          <p className="font-sans text-lg text-surface-500 mt-2">Your active cases, scheduled consultations, and accrued earnings at a glance.</p>
+          <h1 className="lx-h1">Practice Workspace</h1>
+          <p className="body mt-1">Your active cases, scheduled consultations, and accrued earnings at a glance.</p>
         </div>
         <div className="flex gap-4 flex-wrap md:justify-end">
           {data.leaderboardPosition && (
@@ -147,29 +147,28 @@ export default function ProviderDashboard() {
               <p className="text-sm text-surface-500 mt-1">Confirmed and pending sessions scheduled in your docket</p>
             </div>
 
-            {/* Quick Stats — lead with case-level metrics that match the new lifecycle */}
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
-              {[
-                { icon: <FileText size={18} />,    label: 'New Requests',   value: data.newRequests,   to: '/provider/docket', highlight: data.newRequests > 0 },
-                { icon: <Briefcase size={18} />,   label: 'Open Cases',     value: data.openCases,     to: '/provider/docket' },
-                { icon: <Calendar size={18} />,    label: "Today's Sessions", value: data.upcomingAppointments.length },
-                { icon: <Users size={18} />,       label: 'Active Clients', value: data.activeClients },
-              ].map(stat => {
-                const body = (
-                  <div className={`bg-surface-50 p-3 rounded-lg border flex items-center gap-3 ${stat.highlight ? 'border-amber-300 ring-1 ring-amber-100' : 'border-surface-200'}`}>
-                    <div className={`w-8 h-8 rounded flex items-center justify-center shrink-0 ${stat.highlight ? 'bg-amber-100 text-amber-700' : 'bg-primary-100 text-primary-800'}`}>
-                      {stat.icon}
-                    </div>
-                    <div className="min-w-0">
-                      <p className="text-[10px] font-sans uppercase tracking-widest font-bold text-surface-500 leading-tight">{stat.label}</p>
-                      <p className="text-lg font-heading text-primary-900 leading-tight">{stat.value}</p>
-                    </div>
-                  </div>
-                );
-                return stat.to
-                  ? <Link key={stat.label} to={stat.to} className="hover:opacity-80 transition-opacity">{body}</Link>
-                  : <div key={stat.label}>{body}</div>;
-              })}
+            {/* Minimal KPI row — Variation A */}
+            <div className="lx-kpi-row mb-6">
+              <Link to="/provider/docket" className="lx-kpi lx-kpi-clickable">
+                <div className="lx-kpi-label">New requests</div>
+                <div className="lx-kpi-value" style={data.newRequests > 0 ? { color: 'var(--brass-dark)' } : undefined}>{data.newRequests}</div>
+                <div className="lx-kpi-meta">{data.newRequests > 0 ? 'Awaiting your acceptance' : 'No new requests'}</div>
+              </Link>
+              <Link to="/provider/docket" className="lx-kpi lx-kpi-clickable">
+                <div className="lx-kpi-label">Open cases</div>
+                <div className="lx-kpi-value">{data.openCases}</div>
+                <div className="lx-kpi-meta">In active management</div>
+              </Link>
+              <div className="lx-kpi">
+                <div className="lx-kpi-label">Today's sessions</div>
+                <div className="lx-kpi-value">{data.upcomingAppointments.length}</div>
+                <div className="lx-kpi-meta">{data.upcomingAppointments.length === 0 ? 'No consultations today' : 'Scheduled for today'}</div>
+              </div>
+              <div className="lx-kpi">
+                <div className="lx-kpi-label">Active clients</div>
+                <div className="lx-kpi-value">{data.activeClients}</div>
+                <div className="lx-kpi-meta">Across all open matters</div>
+              </div>
             </div>
 
             {/* Appointments List */}

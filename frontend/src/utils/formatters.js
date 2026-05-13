@@ -33,7 +33,9 @@ export function formatRupees(value, { emptyDash = true } = {}) {
  * Format a price-or-range string. Accepts:
  *   "1500"               → "₹1,500"
  *   "1500 - 8000"        → "₹1,500 - ₹8,000"
- *   "₹2,000 – ₹5,000"    → "₹2,000 - ₹5,000"  (normalizes em/en dashes)
+ *   "₹2,000 - ₹5,000"    → "₹2,000 - ₹5,000"  (currency on both bounds — common)
+ *   "₹2,000 – ₹5,000"    → "₹2,000 - ₹5,000"  (en/em-dash too)
+ *   "2000-5000"          → "₹2,000 - ₹5,000"  (no spaces)
  *   1500                 → "₹1,500"
  *   ""                   → "" (or "—" depending on flag)
  */
@@ -42,8 +44,8 @@ export function formatPriceRange(value, { emptyDash = false } = {}) {
   if (typeof value === 'number') return formatRupees(value, { emptyDash: false });
 
   const s = String(value).trim();
-  // Match two numbers separated by any dash-like char (-, –, —, ~, to)
-  const m = s.match(/(\d[\d,]*\.?\d*)\s*(?:-|–|—|~|to)\s*(\d[\d,]*\.?\d*)/i);
+  // Tolerate currency symbols on either bound, any dash variant, optional whitespace.
+  const m = s.match(/[₹$€£¥]?\s*(\d[\d,]*\.?\d*)\s*(?:-|–|—|~|to)\s*[₹$€£¥]?\s*(\d[\d,]*\.?\d*)/i);
   if (m) {
     return `${formatRupees(m[1], { emptyDash: false })} - ${formatRupees(m[2], { emptyDash: false })}`;
   }

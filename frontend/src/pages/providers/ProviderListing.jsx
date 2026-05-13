@@ -141,10 +141,10 @@ export default function ProviderListing() {
 
       {/* Marketplace Canvas */}
       <section className="flex-1">
-        <header className="mb-8">
-          <h1 className="font-heading text-4xl text-surface-900 mb-4">Certified Legal Practitioners</h1>
-          <p className="font-sans text-lg text-surface-500 max-w-2xl">
-            Access verified counsel within the Sovereign Digital Framework. Review expertise, credentials, and reputation scores before proceeding with formal engagement.
+        <header className="mb-7">
+          <h1 className="lx-h1 mb-2">Certified Legal Practitioners</h1>
+          <p className="body max-w-2xl">
+            Access verified counsel within the Lexium registry. Review expertise, credentials, and reputation scores before proceeding with formal engagement.
           </p>
         </header>
 

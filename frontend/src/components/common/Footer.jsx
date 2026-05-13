@@ -8,7 +8,6 @@ export default function Footer() {
         <div className="flex flex-wrap justify-center gap-12 mb-4">
           <div className="flex flex-col items-center gap-2">
             <h4 className="font-sans text-[10px] uppercase tracking-[0.2em] font-bold text-surface-800 mb-2">Platform</h4>
-            <Link to="/providers" className="font-sans text-[10px] uppercase tracking-[0.2em] font-medium text-surface-800/60 hover:text-primary-900 transition-colors">Browse Providers</Link>
             <Link to="/about" className="font-sans text-[10px] uppercase tracking-[0.2em] font-medium text-surface-800/60 hover:text-primary-900 transition-colors">How it Works</Link>
             <Link to="/register?role=provider" className="font-sans text-[10px] uppercase tracking-[0.2em] font-medium text-surface-800/60 hover:text-primary-900 transition-colors">Join as Professional</Link>
           </div>

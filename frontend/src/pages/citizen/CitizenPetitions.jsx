@@ -105,39 +105,30 @@ export default function CitizenPetitions() {
   }
 
   return (
-    <div className="max-w-[1920px] mx-auto p-6 md:p-12 font-sans bg-transparent">
-      <header className="mb-8 border-b border-surface-200 pb-6 flex flex-col sm:flex-row justify-between items-start sm:items-end gap-4">
+    <div className="max-w-[1440px] mx-auto px-6 md:px-8 pt-6 pb-12 font-sans bg-transparent">
+      <header className="mb-8 pb-5 flex flex-col sm:flex-row justify-between items-start sm:items-end gap-4" style={{ borderBottom: '1px solid var(--hairline)' }}>
         <div>
-          <h1 className="font-heading text-4xl text-primary-900">My Cases</h1>
-          <p className="font-sans text-lg text-surface-500 mt-2">Track the progress of your ongoing legal engagements and consultations.</p>
+          <h1 className="lx-h1">My Cases</h1>
+          <p className="body mt-1">Track the progress of your ongoing legal engagements and consultations.</p>
         </div>
-        <Link
-          to="/providers"
-          className="bg-primary-800 text-white font-sans text-xs uppercase tracking-widest font-bold px-6 py-3 rounded hover:bg-primary-700 transition-colors shrink-0"
-        >
+        <Link to="/providers" className="lx-btn lx-btn-primary shrink-0">
           File New Case
         </Link>
       </header>
 
       {/* Filter tabs */}
-      <div className="flex gap-2 mb-8">
+      <div className="flex gap-2 mb-6 flex-wrap">
         {[
-          { key: 'active', label: 'Active Cases', count: activeCnt },
-          { key: 'closed', label: 'Closed / Resolved', count: closedCnt },
+          { key: 'active', label: 'Active cases', count: activeCnt },
+          { key: 'closed', label: 'Closed / resolved', count: closedCnt },
         ].map(tab => (
           <button
             key={tab.key}
             onClick={() => setFilter(tab.key)}
-            className={`flex items-center gap-2 px-5 py-2.5 rounded-full font-sans text-xs uppercase tracking-widest font-bold transition-colors cursor-pointer border ${
-              filter === tab.key
-                ? 'bg-primary-800 text-white border-primary-800'
-                : 'bg-white text-surface-600 border-surface-200 hover:bg-surface-50'
-            }`}
+            className={`lx-tab ${filter === tab.key ? 'active' : ''}`}
           >
             {tab.label}
-            <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-bold ${filter === tab.key ? 'bg-white/20 text-white' : 'bg-surface-100 text-surface-500'}`}>
-              {tab.count}
-            </span>
+            <span className="lx-tab-count">{tab.count}</span>
           </button>
         ))}
       </div>

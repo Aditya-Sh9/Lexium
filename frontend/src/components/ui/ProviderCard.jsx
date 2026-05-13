@@ -1,7 +1,5 @@
 import { Link } from 'react-router';
-import { MapPin } from 'lucide-react';
-import RatingStars from './RatingStars';
-import Badge from './Badge';
+import { MapPin, Briefcase, Star, ArrowRight, CheckCircle2 } from 'lucide-react';
 import { getInitials } from '../../utils/helpers';
 import { formatPriceRange } from '../../utils/formatters';
 
@@ -32,57 +30,60 @@ export default function ProviderCard({ provider }) {
   const displayReviewCount = review_count || reviewCount || 0;
   const displayPrice = price_range || priceRange || '';
 
-  return (
-    <Link
-      to={`/providers/${providerId}`}
-      className="bg-white rounded-xl p-6 shadow-diffused border border-white/50 relative overflow-hidden bg-arch-pattern group block hover:-translate-y-1 transition-all duration-300"
-    >
-      {/* Verification Badge */}
-      {badges?.includes('verified') && (
-        <div className="absolute top-4 right-4 wax-seal w-8 h-8 rounded-full flex items-center justify-center text-white" title="Verified Counsel">
-          <span className="material-symbols-outlined text-[16px]">verified</span>
-        </div>
-      )}
+  const isVerified = badges?.includes('verified');
+  const isTopRated = badges?.includes('topRated') || badges?.includes('top-rated');
 
-      <div className="flex items-start gap-4 mb-4">
-        <div className="w-16 h-16 rounded shadow-inset-engraved overflow-hidden shrink-0 flex items-center justify-center bg-primary-800 text-white font-heading text-xl">
-          {provider.avatar ? (
-            <img alt={name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" src={provider.avatar} />
-          ) : (
-            initials || getInitials(name)
+  return (
+    <Link to={`/providers/${providerId}`} className="lx-card block transition-all hover:border-[var(--color-surface-300)]">
+      {/* Body — horizontal layout (avatar | identity | top badge) */}
+      <div className="p-[18px]">
+        <div className="flex items-start gap-3">
+          <div className="lx-avatar lx-avatar-lg lx-avatar-tone-2">
+            {initials || getInitials(name)}
+          </div>
+
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-1.5">
+              <span className="strong truncate" style={{ fontSize: 15 }}>{name}</span>
+              {isVerified && <CheckCircle2 size={13} className="text-[var(--info-600)] shrink-0" />}
+            </div>
+            <span className="body-sm muted">{specialization}</span>
+            <div className="flex flex-wrap gap-3 mt-1 items-center">
+              <span className="inline-flex items-center gap-1 tabular" style={{ fontSize: 12, fontWeight: 600 }}>
+                <Star size={11} fill="currentColor" className="text-[var(--brass)]" />
+                {Number(rating || 0).toFixed(1)}
+                <span className="muted" style={{ fontWeight: 500 }}>({displayReviewCount})</span>
+              </span>
+              <span className="inline-flex items-center gap-1 body-xs muted"><MapPin size={11} /> {location}</span>
+              <span className="inline-flex items-center gap-1 body-xs muted"><Briefcase size={11} /> {experience} yrs</span>
+            </div>
+          </div>
+
+          {isTopRated && (
+            <span className="lx-badge lx-badge-gold shrink-0">Top rated</span>
           )}
         </div>
-        
-        <div>
-          <h3 className="font-heading text-[20px] text-surface-900 leading-tight mb-1 group-hover:text-primary-800 transition-colors">
-            {name}
-          </h3>
-          <p className="font-sans text-[10px] text-surface-500 uppercase tracking-widest font-bold">
-            {specialization}
-          </p>
-        </div>
-      </div>
 
-      <div className="mb-4">
-        <div className="flex items-center gap-1 mb-2">
-          <RatingStars rating={rating || 0} size={16} showValue={false} />
-          <span className="font-sans text-[10px] text-surface-500 ml-2 mt-1 font-bold uppercase tracking-widest">
-            {rating} ({displayReviewCount})
-          </span>
-        </div>
-        <p className="font-sans text-[14px] text-surface-600 line-clamp-2">
+        <p className="body-sm mt-3" style={{ color: 'var(--color-surface-600)' }}>
           {experience} years of experience practicing in {location}. Providing expertise as a registered {displayType}.
         </p>
       </div>
 
-      <div className="flex items-center justify-between pt-4 pillar-divider-horizontal">
-        <span className="font-heading text-[18px] text-primary-900 font-bold">
-          {formatPriceRange(displayPrice, { emptyDash: true })}
-          <span className="text-[12px] text-surface-500 font-sans font-normal"> /consultation</span>
+      {/* Footer — divider + price + CTA */}
+      <div
+        className="flex items-center justify-between px-[18px] py-2.5"
+        style={{ borderTop: '1px solid var(--hairline)', background: 'var(--color-surface-50)' }}
+      >
+        <div className="flex flex-col">
+          <span className="label" style={{ fontSize: 10 }}>From</span>
+          <span className="tabular strong" style={{ fontSize: 13 }}>
+            {formatPriceRange(displayPrice, { emptyDash: true })}
+            <span className="muted" style={{ fontWeight: 400 }}> /consult</span>
+          </span>
+        </div>
+        <span className="lx-btn lx-btn-secondary lx-btn-sm">
+          View profile <ArrowRight size={11} />
         </span>
-        <button className="bg-surface-50 text-primary-800 border border-primary-800 font-sans text-[12px] font-medium px-4 py-1.5 rounded hover:bg-primary-800 hover:text-white transition-colors cursor-pointer">
-          View Docket
-        </button>
       </div>
     </Link>
   );

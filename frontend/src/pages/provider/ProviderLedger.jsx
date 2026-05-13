@@ -80,17 +80,14 @@ export default function ProviderLedger() {
   }
 
   return (
-    <div className="max-w-[1920px] mx-auto p-6 md:p-12 font-sans bg-transparent">
+    <div className="max-w-[1440px] mx-auto px-6 md:px-8 pt-6 pb-12 font-sans bg-transparent">
       <header className="mb-10 border-b border-surface-200 pb-6 flex flex-col md:flex-row justify-between items-start md:items-end gap-4">
         <div>
-          <h1 className="font-heading text-4xl text-primary-900">Financial Ledger</h1>
-          <p className="font-sans text-lg text-surface-500 mt-2">Earnings from completed consultations — cleared payouts and funds awaiting administrative release.</p>
+          <h1 className="lx-h1">Financial Ledger</h1>
+          <p className="body mt-1">Earnings from completed consultations — cleared payouts and funds awaiting administrative release.</p>
         </div>
-        <button
-          onClick={handleExport}
-          className="flex items-center gap-2 bg-white border border-surface-300 text-surface-700 px-4 py-2.5 rounded font-sans text-xs uppercase tracking-widest font-bold hover:bg-surface-50 cursor-pointer transition-colors"
-        >
-          <Download size={15} /> Export CSV
+        <button onClick={handleExport} className="lx-btn lx-btn-secondary">
+          <Download size={14} /> Export CSV
         </button>
       </header>
 
@@ -134,64 +131,57 @@ export default function ProviderLedger() {
       {/* Filters */}
       <div className="flex flex-col sm:flex-row gap-3 mb-5">
         <div className="relative flex-1 max-w-sm">
-          <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-surface-400" />
+          <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-surface-400 pointer-events-none" />
           <input
             type="text"
             placeholder="Search client, type, or ID…"
             value={searchQuery}
             onChange={e => setSearchQuery(e.target.value)}
-            className="w-full pl-11 pr-4 py-2.5 bg-white border border-surface-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500/30 text-sm font-sans"
+            className="lx-input pl-9"
           />
         </div>
 
         <div className="flex gap-2 flex-wrap">
           {[
-            { key: 'all',     label: 'All',      count: counts.all },
-            { key: 'escrow',  label: 'In Escrow',count: counts.escrow || 0 },
-            { key: 'cleared', label: 'Cleared',  count: counts.cleared || 0 },
+            { key: 'all',     label: 'All',       count: counts.all },
+            { key: 'escrow',  label: 'In escrow', count: counts.escrow || 0 },
+            { key: 'cleared', label: 'Cleared',   count: counts.cleared || 0 },
           ].map(f => (
             <button
               key={f.key}
               onClick={() => setStatusFilter(f.key)}
-              className={`flex items-center gap-1.5 px-4 py-2 rounded-full font-sans text-xs uppercase tracking-widest font-bold border transition-colors cursor-pointer ${
-                statusFilter === f.key
-                  ? 'bg-primary-800 text-white border-primary-800'
-                  : 'bg-white text-surface-600 border-surface-200 hover:bg-surface-50'
-              }`}
+              className={`lx-tab ${statusFilter === f.key ? 'active' : ''}`}
             >
               {f.label}
-              <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${statusFilter === f.key ? 'bg-white/20' : 'bg-surface-100 text-surface-500'}`}>
-                {f.count}
-              </span>
+              <span className="lx-tab-count">{f.count}</span>
             </button>
           ))}
         </div>
       </div>
 
-      {/* Transactions Table */}
-      <div className="bg-white rounded-xl border border-surface-200 shadow-sm overflow-hidden">
+      {/* Bordered card table — Variation A */}
+      <div className="lx-card" style={{ overflow: 'hidden' }}>
         <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse">
+          <table className="lx-table tabular">
             <thead>
-              <tr className="bg-surface-50 border-b border-surface-200">
-                <th className="font-sans text-xs uppercase tracking-widest font-bold text-surface-500 p-4">Date</th>
-                <th className="font-sans text-xs uppercase tracking-widest font-bold text-surface-500 p-4">Transaction ID</th>
-                <th className="font-sans text-xs uppercase tracking-widest font-bold text-surface-500 p-4">Client &amp; Case</th>
-                <th className="font-sans text-xs uppercase tracking-widest font-bold text-surface-500 p-4">Status</th>
-                <th className="font-sans text-xs uppercase tracking-widest font-bold text-surface-500 p-4 text-right">Amount</th>
+              <tr>
+                <th>Transaction</th>
+                <th>Client &amp; Case</th>
+                <th>Status</th>
+                <th className="num">Amount</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-surface-100">
+            <tbody>
               {filteredTransactions.length === 0 ? (
                 <tr>
-                  <td colSpan="5" className="p-12 text-center">
-                    <IndianRupee size={32} className="mx-auto text-surface-300 mb-2" />
-                    <p className="text-surface-700 font-semibold">
+                  <td colSpan="4" className="!p-12 text-center">
+                    <IndianRupee size={28} className="mx-auto text-surface-300 mb-2" />
+                    <p className="strong" style={{ fontSize: 14 }}>
                       {searchQuery || statusFilter !== 'all'
                         ? 'No matching transactions'
                         : 'No earnings recorded yet'}
                     </p>
-                    <p className="text-sm text-surface-500 mt-1">
+                    <p className="body-sm muted mt-1">
                       {searchQuery || statusFilter !== 'all'
                         ? 'Adjust your filters to see other transactions.'
                         : 'Transactions are generated automatically when you complete a consultation.'}
@@ -200,25 +190,28 @@ export default function ProviderLedger() {
                 </tr>
               ) : (
                 filteredTransactions.map((trx, i) => (
-                  <tr key={trx._id || trx.id || i} className="hover:bg-surface-50 transition-colors">
-                    <td className="p-4 text-sm text-surface-600 whitespace-nowrap">{trx.date}</td>
-                    <td className="p-4 font-mono text-xs text-surface-500 whitespace-nowrap">{trx.transaction_id}</td>
-                    <td className="p-4">
-                      <p className="font-semibold text-primary-900">{trx.client_name}</p>
-                      <p className="text-xs text-surface-500">
+                  <tr key={trx._id || trx.id || i}>
+                    <td>
+                      <div className="flex flex-col gap-0.5">
+                        <span className="mono" style={{ fontSize: 12 }}>{trx.transaction_id}</span>
+                        <span className="body-xs muted">{trx.date}</span>
+                      </div>
+                    </td>
+                    <td>
+                      <p className="strong">{trx.client_name}</p>
+                      <p className="body-xs muted">
                         {trx.type}
-                        {trx.petition_code && <span className="ml-1 text-surface-400">· {trx.petition_code}</span>}
+                        {trx.petition_code && <span className="mono"> · {trx.petition_code}</span>}
                       </p>
                     </td>
-                    <td className="p-4">
-                      <span className={`text-xs font-bold uppercase tracking-widest px-2 py-1 rounded ${STATUS_STYLES[trx.status] || 'bg-surface-100 text-surface-600'}`}>
+                    <td>
+                      <span className={`lx-badge ${trx.status === 'cleared' ? 'lx-badge-success' : 'lx-badge-warn'}`}>
+                        <span className="lx-badge-dot" style={{ background: trx.status === 'cleared' ? 'var(--success-600)' : 'var(--warning-600)' }} />
                         {STATUS_LABELS[trx.status] || trx.status}
                       </span>
                     </td>
-                    <td className="p-4 text-right">
-                      <span className="font-heading text-lg font-bold text-primary-900 flex items-center justify-end">
-                        {formatRupees(trx.amount, { emptyDash: false })}
-                      </span>
+                    <td className="num strong">
+                      {formatRupees(trx.amount, { emptyDash: false })}
                     </td>
                   </tr>
                 ))

@@ -31,22 +31,21 @@ export default function DashboardNav() {
                 user?.role === 'provider' ? providerLinks : citizenLinks;
 
   return (
-    <nav className="bg-white/80 backdrop-blur-[16px] border-b border-surface-200 shadow-sm sticky top-20 z-30">
-      <div className="max-w-[1920px] mx-auto px-6 md:px-12">
-        <div className="flex gap-1 overflow-x-auto scrollbar-hide py-1">
+    <nav
+      className="bg-white/85 backdrop-blur-[12px] sticky top-[60px] z-30"
+      style={{ borderBottom: '1px solid var(--hairline)' }}
+    >
+      <div className="max-w-[1440px] mx-auto px-6 md:px-8">
+        <div className="flex gap-1 overflow-x-auto scrollbar-hide h-11 items-center">
           {links.map(({ to, label, icon: Icon }) => {
             const isActive = location.pathname === to;
             return (
               <Link
                 key={to}
                 to={to}
-                className={`flex items-center gap-2 px-4 py-2.5 rounded-lg font-sans text-sm font-medium whitespace-nowrap transition-all ${
-                  isActive
-                    ? 'bg-primary-50 text-primary-800 border border-primary-200'
-                    : 'text-surface-600 hover:bg-surface-50 hover:text-primary-800'
-                }`}
+                className={`lx-subtab ${isActive ? 'active' : ''}`}
               >
-                <Icon size={16} />
+                <Icon size={14} />
                 {label}
               </Link>
             );

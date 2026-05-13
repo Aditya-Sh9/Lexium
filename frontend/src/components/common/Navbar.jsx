@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router';
-import { Menu, X, Scale } from 'lucide-react';
+import { Menu, X, Scale, LogOut } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
+import { getInitials } from '../../utils/helpers';
 
 export default function Navbar() {
   const [isOpen, setIsOpen] = useState(false);
@@ -9,22 +10,22 @@ export default function Navbar() {
   const navigate = useNavigate();
   const { user, isAuthenticated, isAdmin, isPendingProvider, logout } = useAuth();
 
-  // Determine the dashboard path based on role
-  const getDashboardPath = () => {
+  // Dashboard "home" path for the avatar chip
+  const dashboardPath = (() => {
     if (!isAuthenticated) return '/login';
     if (isAdmin) return '/admin/dashboard';
     if (user?.role === 'provider') {
       return isPendingProvider ? '/pending-approval' : '/provider/dashboard';
     }
     return '/citizen/dashboard';
-  };
+  })();
 
-  // Determine the dashboard label
-  const getDashboardLabel = () => {
-    if (isAdmin) return 'Admin Panel';
-    if (user?.role === 'provider') return isPendingProvider ? 'Status' : 'Dashboard';
-    return 'Dashboard';
-  };
+  const dashboardLabel = (() => {
+    if (isAdmin) return 'Admin';
+    if (user?.role === 'provider') return isPendingProvider ? 'Status' : user?.name?.split(' ')[0] || 'Provider';
+    if (user?.role === 'citizen') return user?.name?.split(' ')[0] || 'Citizen';
+    return 'Account';
+  })();
 
   const handleLogout = async () => {
     await logout();
@@ -32,115 +33,165 @@ export default function Navbar() {
     navigate('/');
   };
 
-  // Public nav links
-  const publicLinks = [{ to: '/', label: 'Home' }];
-
-  // Only show Find Providers for authenticated non-admin users (citizens/providers)
-  if (isAuthenticated && !isAdmin) {
-    publicLinks.push({ to: '/providers', label: 'Find Providers' });
+  // ── Single-nav link computation (replaces the separate DashboardNav) ──
+  // Authenticated users see their role-specific dashboard links.
+  // Visitors see the public marketplace links.
+  let navLinks = [];
+  if (!isAuthenticated) {
+    navLinks = [
+      { to: '/', label: 'Home' },
+      { to: '/providers', label: 'Find Providers' },
+    ];
+  } else if (isAdmin) {
+    navLinks = [
+      { to: '/admin/dashboard',  label: 'Dashboard' },
+      { to: '/admin/providers',  label: 'Providers' },
+      { to: '/admin/users',      label: 'Users' },
+      { to: '/admin/escrow',     label: 'Escrow' },
+    ];
+  } else if (user?.role === 'provider') {
+    if (isPendingProvider) {
+      navLinks = [{ to: '/pending-approval', label: 'Status' }];
+    } else {
+      navLinks = [
+        { to: '/provider/dashboard', label: 'Dashboard' },
+        { to: '/provider/docket',    label: 'Docket' },
+        { to: '/provider/ledger',    label: 'Ledger' },
+        { to: '/provider/eminence',  label: 'Eminence' },
+        { to: '/provider/profile',   label: 'Profile' },
+      ];
+    }
+  } else if (user?.role === 'citizen') {
+    navLinks = [
+      { to: '/citizen/dashboard',  label: 'Dashboard' },
+      { to: '/citizen/petitions',  label: 'My Cases' },
+      { to: '/citizen/history',    label: 'Case History' },
+      { to: '/providers',          label: 'Find Providers' },
+    ];
   }
 
+  const initials = user?.name ? getInitials(user.name) : '';
+
   return (
-    <nav className="fixed top-0 w-full z-50 border-b border-white/20 bg-surface-50/80 backdrop-blur-[20px] shadow-[0_30px_60px_-10px_rgba(15,27,45,0.06)]">
-      <div className="flex justify-between items-center h-20 px-6 md:px-12 max-w-[1920px] mx-auto">
-        {/* Logo */}
-        <Link to="/" className="flex items-center gap-2.5 group" onClick={() => setIsOpen(false)}>
-          <div className="w-9 h-9 rounded-lg bg-primary-800 flex items-center justify-center shadow-md group-hover:scale-105 transition-transform">
-            <Scale size={18} className="text-white" />
+    <nav className="fixed top-0 w-full z-50 lx-topnav">
+      <div
+        className="h-[60px] px-6 md:px-8 max-w-[1440px] mx-auto grid items-center"
+        style={{ gridTemplateColumns: '1fr auto 1fr' }}
+      >
+        {/* Brand — left */}
+        <Link
+          to={dashboardPath}
+          className="flex items-center gap-2.5 group justify-self-start"
+          onClick={() => setIsOpen(false)}
+        >
+          <div
+            className="w-7 h-7 rounded-md bg-primary-900 flex items-center justify-center transition-transform group-hover:scale-105"
+            style={{ boxShadow: 'inset 0 0 0 1px rgba(255,255,255,0.06)' }}
+          >
+            <Scale size={14} className="text-[var(--brass-light)]" />
           </div>
-          <span className="text-lg font-bold text-primary-900 uppercase tracking-widest font-heading hidden sm:inline">
+          <span
+            className="text-[18px] font-heading text-primary-900 hidden sm:inline"
+            style={{ letterSpacing: '0.01em', fontWeight: 500 }}
+          >
             Lexium
           </span>
         </Link>
 
-        {/* Desktop Nav */}
-        <div className="hidden md:flex items-center gap-6">
-          {publicLinks.map((link) => (
+        {/* Centered nav — middle column. One bar for everything. */}
+        <nav className="hidden md:flex items-center gap-7 h-[60px] justify-self-center">
+          {navLinks.map((link) => (
             <Link
               key={link.to}
               to={link.to}
-              className={`font-sans text-sm font-medium px-3 py-1.5 rounded-lg transition-all ${
-                location.pathname === link.to
-                  ? 'text-primary-800 bg-primary-50'
-                  : 'text-surface-600 hover:text-primary-800 hover:bg-surface-50'
-              }`}
+              className={`lx-nav-link ${location.pathname === link.to ? 'active' : ''}`}
             >
               {link.label}
             </Link>
           ))}
+        </nav>
 
-          {/* Dynamic auth buttons — max 2 */}
-          <div className="flex items-center gap-3 ml-2 pl-4 border-l border-surface-200">
-            {isAuthenticated ? (
-              <>
-                {/* Button 1: Dashboard/Status */}
-                <Link
-                  to={getDashboardPath()}
-                  className="px-5 py-2 bg-primary-800 text-white font-sans text-xs uppercase tracking-widest font-bold rounded-lg hover:bg-primary-900 transition-all border border-accent-300/40"
-                >
-                  {getDashboardLabel()}
-                </Link>
-                {/* Button 2: Logout */}
-                <button
-                  onClick={handleLogout}
-                  className="px-4 py-2 text-surface-600 font-sans text-xs uppercase tracking-widest font-bold rounded-lg hover:bg-surface-100 hover:text-red-600 transition-all cursor-pointer"
-                >
-                  Logout
-                </button>
-              </>
-            ) : (
-              <>
-                {/* Button 1: Login */}
-                <Link
-                  to="/login"
-                  className="px-4 py-2 text-surface-700 font-sans text-xs uppercase tracking-widest font-bold rounded-lg hover:bg-surface-50 transition-all"
-                >
-                  Login
-                </Link>
-                {/* Button 2: Register */}
-                <Link
-                  to="/register"
-                  className="px-5 py-2 bg-primary-800 text-white font-sans text-xs uppercase tracking-widest font-bold rounded-lg hover:bg-primary-900 transition-all border border-accent-300/40"
-                >
-                  Register
-                </Link>
-              </>
-            )}
-          </div>
+        {/* Profile / auth — right */}
+        <div className="hidden md:flex items-center gap-2 justify-self-end">
+          {isAuthenticated ? (
+            <>
+              <Link
+                to={dashboardPath}
+                className="flex items-center gap-2 h-9 pl-1 pr-3 rounded-full border border-[var(--hairline-strong)] bg-white text-surface-800 hover:bg-surface-100 transition-colors"
+                title={dashboardLabel}
+              >
+                <span className="w-7 h-7 rounded-full lx-avatar-tone-1 flex items-center justify-center text-[11px] font-semibold">
+                  {initials || '—'}
+                </span>
+                <span className="text-[13px] font-medium hidden lg:inline">{dashboardLabel}</span>
+              </Link>
+              <button
+                onClick={handleLogout}
+                className="lx-btn lx-btn-ghost lx-btn-sm"
+                title="Sign out"
+                aria-label="Sign out"
+              >
+                <LogOut size={14} />
+              </button>
+            </>
+          ) : (
+            <>
+              <Link to="/login" className="lx-btn lx-btn-ghost lx-btn-sm">Login</Link>
+              <Link to="/register" className="lx-btn lx-btn-primary lx-btn-sm">Register</Link>
+            </>
+          )}
         </div>
 
         {/* Mobile hamburger */}
-        <button className="md:hidden p-2 text-primary-900 cursor-pointer" onClick={() => setIsOpen(!isOpen)}>
-          {isOpen ? <X size={24} /> : <Menu size={24} />}
+        <button
+          className="md:hidden p-2 text-primary-900 cursor-pointer justify-self-end"
+          onClick={() => setIsOpen(!isOpen)}
+        >
+          {isOpen ? <X size={22} /> : <Menu size={22} />}
         </button>
       </div>
 
       {/* Mobile menu */}
       {isOpen && (
-        <div className="md:hidden border-t border-surface-200 bg-surface-50/95 backdrop-blur-[20px] px-6 py-4 space-y-3">
-          {publicLinks.map((link) => (
-            <Link key={link.to} to={link.to} onClick={() => setIsOpen(false)}
-              className="block font-sans text-base text-surface-800 py-1.5">
+        <div
+          className="md:hidden bg-surface-50/95 backdrop-blur-[20px] px-6 py-4 space-y-3"
+          style={{ borderTop: '1px solid var(--hairline)' }}
+        >
+          {navLinks.map((link) => (
+            <Link
+              key={link.to}
+              to={link.to}
+              onClick={() => setIsOpen(false)}
+              className={`block py-1.5 text-base ${
+                location.pathname === link.to ? 'text-primary-900 font-medium' : 'text-surface-700'
+              }`}
+            >
               {link.label}
             </Link>
           ))}
-          <div className="border-t border-surface-200 pt-3 flex flex-col gap-3">
+          <div className="pt-3 flex flex-col gap-2" style={{ borderTop: '1px solid var(--hairline)' }}>
             {isAuthenticated ? (
               <>
-                <Link to={getDashboardPath()} onClick={() => setIsOpen(false)}
-                  className="inline-block bg-primary-800 text-white px-5 py-2.5 font-sans text-sm rounded-lg border border-accent-300/40 w-max font-bold uppercase tracking-widest">
-                  {getDashboardLabel()}
+                <Link
+                  to={dashboardPath}
+                  onClick={() => setIsOpen(false)}
+                  className="lx-btn lx-btn-primary lx-btn-sm w-max"
+                >
+                  {dashboardLabel}
                 </Link>
-                <button onClick={handleLogout}
-                  className="text-left text-sm font-sans font-medium text-red-600 cursor-pointer">
-                  Logout
+                <button
+                  onClick={handleLogout}
+                  className="text-left text-sm font-medium text-[var(--danger-600)] cursor-pointer"
+                >
+                  Sign out
                 </button>
               </>
             ) : (
               <>
-                <Link to="/login" onClick={() => setIsOpen(false)} className="font-sans text-base text-surface-800">Login</Link>
-                <Link to="/register" onClick={() => setIsOpen(false)}
-                  className="inline-block bg-primary-800 text-white px-5 py-2.5 font-sans text-sm rounded-lg border border-accent-300/40 w-max font-bold uppercase tracking-widest">
+                <Link to="/login" onClick={() => setIsOpen(false)} className="lx-btn lx-btn-ghost lx-btn-sm w-max">
+                  Login
+                </Link>
+                <Link to="/register" onClick={() => setIsOpen(false)} className="lx-btn lx-btn-primary lx-btn-sm w-max">
                   Register
                 </Link>
               </>

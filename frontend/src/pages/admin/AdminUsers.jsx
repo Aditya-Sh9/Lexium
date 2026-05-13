@@ -334,24 +334,24 @@ export default function AdminUsers() {
         />
       )}
 
-      <div className="max-w-[1400px] mx-auto px-6 py-8">
-        <div className="mb-8">
-          <h1 className="font-heading text-3xl text-surface-900 mb-1">User Management</h1>
-          <p className="font-sans text-surface-500">All registered users on the platform. Click a provider row to view their full profile.</p>
+      <div className="max-w-[1440px] mx-auto px-6 md:px-8 pt-6 pb-12">
+        <div className="mb-7">
+          <h1 className="lx-h1">User Management</h1>
+          <p className="body mt-1">All registered users on the platform. Click a provider row to view their full profile.</p>
         </div>
 
         {/* Filters */}
-        <div className="flex flex-col sm:flex-row gap-3 mb-6">
+        <div className="flex flex-col sm:flex-row gap-3 mb-5">
           <div className="relative flex-1 max-w-sm">
-            <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-surface-400" />
+            <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-surface-400 pointer-events-none" />
             <input
               value={search}
               onChange={e => setSearch(e.target.value)}
-              placeholder="Search by name or email..."
-              className="w-full pl-9 pr-4 py-2.5 bg-white border border-surface-200 rounded-xl text-sm font-sans focus:outline-none focus:ring-2 focus:ring-primary-500/30 focus:border-primary-700 transition-all"
+              placeholder="Search by name or email…"
+              className="lx-input pl-9"
             />
           </div>
-          <div className="flex gap-1 bg-surface-100 rounded-xl p-1 border border-surface-200 w-fit">
+          <div className="flex gap-2 flex-wrap">
             {[
               { id: '', label: 'All' },
               { id: 'citizen', label: 'Citizens' },
@@ -361,11 +361,7 @@ export default function AdminUsers() {
               <button
                 key={tab.id}
                 onClick={() => setFilterRole(tab.id)}
-                className={`px-4 py-2 rounded-lg font-sans text-xs font-medium transition-all cursor-pointer ${
-                  filterRole === tab.id
-                    ? 'bg-white shadow-sm border border-surface-200 text-surface-900'
-                    : 'text-surface-500 hover:text-surface-700'
-                }`}
+                className={`lx-tab ${filterRole === tab.id ? 'active' : ''}`}
               >
                 {tab.label}
               </button>
@@ -374,16 +370,16 @@ export default function AdminUsers() {
         </div>
 
         {/* Table */}
-        <div className="bg-white rounded-xl border border-surface-200 overflow-hidden shadow-sm">
+        <div className="lx-card" style={{ overflow: 'hidden' }}>
           <div className="overflow-x-auto">
-            <table className="w-full">
+            <table className="lx-table">
               <thead>
-                <tr className="border-b border-surface-200 bg-surface-50">
-                  <th className="text-left px-5 py-3 font-sans text-xs uppercase tracking-widest font-bold text-surface-500">User</th>
-                  <th className="text-left px-5 py-3 font-sans text-xs uppercase tracking-widest font-bold text-surface-500">Role</th>
-                  <th className="text-left px-5 py-3 font-sans text-xs uppercase tracking-widest font-bold text-surface-500">Status</th>
-                  <th className="text-left px-5 py-3 font-sans text-xs uppercase tracking-widest font-bold text-surface-500">Joined</th>
-                  <th className="text-right px-5 py-3 font-sans text-xs uppercase tracking-widest font-bold text-surface-500">Actions</th>
+                <tr>
+                  <th>User</th>
+                  <th>Role</th>
+                  <th>Status</th>
+                  <th>Joined</th>
+                  <th style={{ textAlign: 'right' }}>Actions</th>
                 </tr>
               </thead>
               <tbody>

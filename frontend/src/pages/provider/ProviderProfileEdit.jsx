@@ -94,13 +94,13 @@ export default function ProviderProfileEdit() {
   }
 
   return (
-    <div className="max-w-4xl mx-auto p-6 md:p-12 font-sans bg-transparent min-h-screen">
-      <header className="mb-12 border-b border-surface-200 pb-6">
-        <h1 className="font-heading text-4xl text-primary-900">Profile Settings</h1>
-        <p className="font-sans text-lg text-surface-500 mt-2">Manage your public information on the Sovereign Registry.</p>
+    <div className="max-w-4xl mx-auto px-6 md:px-8 pt-6 pb-12 font-sans bg-transparent">
+      <header className="mb-7 pb-5" style={{ borderBottom: '1px solid var(--hairline)' }}>
+        <h1 className="lx-h1">Profile Settings</h1>
+        <p className="body mt-1">Manage your public information on the Lexium registry.</p>
       </header>
 
-      <form onSubmit={handleSubmit} className="bg-white rounded-2xl shadow-sm border border-surface-200 p-8">
+      <form onSubmit={handleSubmit} className="lx-card p-7">
         
         {message && (
           <div className={`mb-6 p-4 rounded-xl text-sm font-bold flex items-center justify-between ${message.includes('success') ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'}`}>

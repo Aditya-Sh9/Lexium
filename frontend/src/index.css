@@ -1,5 +1,422 @@
 @import "tailwindcss";
 
+/* ===================================================================
+   Lexium Refined Design System
+   Canonical tokens + component classes (Variation A direction).
+   Layered ON TOP of the existing Tailwind theme — does not replace it.
+   =================================================================== */
+
+:root {
+  /* Refined brass / gold — restrained */
+  --brass-light: #e8d099;
+  --brass:       #b8954f;
+  --brass-mid:   #a07c3a;
+  --brass-dark:  #7a5e28;
+
+  /* Semantic surfaces */
+  --success-50:  #ecf4ee;
+  --success-600: #2f6b3f;
+  --warning-50:  #faf2e0;
+  --warning-600: #8a6919;
+  --danger-50:   #f8ebe8;
+  --danger-600:  #913423;
+  --info-50:     #e9eef6;
+  --info-600:    #2c4d7c;
+
+  /* Hairlines — the soul of premium UI */
+  --hairline:        rgba(58, 50, 35, 0.08);
+  --hairline-strong: rgba(58, 50, 35, 0.14);
+
+  /* Surface tier 150 (between 100 and 200) — used by avatars */
+  --color-surface-150: #ece8e0;
+
+  /* Refined shadows */
+  --shadow-xs: 0 1px 0 rgba(15, 27, 45, 0.03);
+  --shadow-sm: 0 1px 2px rgba(15, 27, 45, 0.04), 0 1px 3px -1px rgba(15, 27, 45, 0.05);
+  --shadow-md: 0 2px 4px -1px rgba(15, 27, 45, 0.06), 0 4px 12px -2px rgba(15, 27, 45, 0.05);
+  --shadow-lg: 0 8px 24px -8px rgba(15, 27, 45, 0.12), 0 4px 8px -4px rgba(15, 27, 45, 0.06);
+
+  /* Card defaults */
+  --t-radius: 10px;
+  --t-card-bg: #ffffff;
+  --t-card-border: 1px solid var(--hairline);
+  --t-card-shadow: 0 1px 2px rgba(15, 27, 45, 0.04), 0 2px 8px -2px rgba(15, 27, 45, 0.04);
+}
+
+/* ───────────────────────────────────────────────────────────────────
+ * All Lexium component CSS lives inside @layer components.
+ * Tailwind v4 places utility classes in @layer utilities, which has
+ * HIGHER precedence than @layer components. That means utilities like
+ * `pl-9` correctly override `.lx-input`'s default padding-left.
+ * Without this wrapping, unlayered CSS would beat layered utilities
+ * regardless of source order or specificity.
+ * ─────────────────────────────────────────────────────────────────── */
+@layer components {
+
+/* Tabular numerals for tables/ledgers/stats */
+.tabular { font-variant-numeric: tabular-nums; }
+
+/* ── Type System ──────────────────────────────────────────────── */
+.lx-display-1 { font-family: var(--font-heading); font-size: 64px; line-height: 1.05; letter-spacing: -0.02em; font-weight: 400; }
+.lx-display-2 { font-family: var(--font-heading); font-size: 44px; line-height: 1.08; letter-spacing: -0.015em; font-weight: 400; }
+.lx-h1 { font-family: var(--font-heading); font-size: 28px; line-height: 1.2;  letter-spacing: -0.012em; font-weight: 500; color: var(--color-primary-950, #0a1220); }
+.lx-h2 { font-family: var(--font-heading); font-size: 22px; line-height: 1.25; letter-spacing: -0.01em;  font-weight: 500; color: var(--color-primary-950, #0a1220); }
+.lx-h3 { font-family: var(--font-sans);    font-size: 15px; line-height: 1.4;  font-weight: 600; letter-spacing: -0.005em; color: var(--color-surface-900); }
+
+.body-lg { font-size: 16px; line-height: 1.55; color: var(--color-surface-600); }
+.body    { font-size: 14px; line-height: 1.55; color: var(--color-surface-700); }
+.body-sm { font-size: 13px; line-height: 1.5;  color: var(--color-surface-600); }
+.body-xs { font-size: 12px; line-height: 1.45; color: var(--color-surface-500); }
+
+.label {
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  font-weight: 600;
+  color: var(--color-surface-500);
+}
+.label-strong { color: var(--color-surface-700); }
+
+.eyebrow {
+  font-size: 11px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  font-weight: 600;
+  color: var(--brass-mid);
+}
+
+.muted   { color: var(--color-surface-500); }
+.subtle  { color: var(--color-surface-400); }
+.strong  { color: var(--color-surface-900); font-weight: 600; }
+.mono    { font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace; font-feature-settings: 'tnum'; }
+
+/* ── Card / Section ───────────────────────────────────────────── */
+.lx-card {
+  background: var(--t-card-bg);
+  border: var(--t-card-border);
+  border-radius: var(--t-radius);
+  box-shadow: var(--t-card-shadow);
+}
+.lx-card-flat   { box-shadow: none; }
+.lx-card-quiet  { background: transparent; border: 1px solid var(--hairline); box-shadow: none; }
+.lx-card-inset  { background: var(--color-surface-100); border: 1px solid var(--hairline); }
+
+/* ── Buttons ──────────────────────────────────────────────────── */
+.lx-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  height: 36px;
+  padding: 0 14px;
+  border-radius: 8px;
+  font-family: var(--font-sans);
+  font-size: 13px;
+  font-weight: 500;
+  letter-spacing: -0.005em;
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: background 120ms ease, border-color 120ms ease, color 120ms ease, box-shadow 120ms ease;
+  white-space: nowrap;
+  text-decoration: none;
+}
+.lx-btn:focus-visible { outline: 2px solid var(--color-primary-400); outline-offset: 2px; }
+
+.lx-btn-primary {
+  background: var(--color-primary-900);
+  color: white;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.08), 0 1px 2px rgba(15,27,45,0.18);
+}
+.lx-btn-primary:hover { background: var(--color-primary-800); }
+
+.lx-btn-secondary {
+  background: var(--t-card-bg);
+  color: var(--color-surface-800);
+  border-color: var(--hairline-strong);
+  box-shadow: var(--shadow-xs);
+}
+.lx-btn-secondary:hover { background: var(--color-surface-100); border-color: var(--color-surface-300); }
+
+.lx-btn-ghost {
+  background: transparent;
+  color: var(--color-surface-700);
+}
+.lx-btn-ghost:hover { background: var(--color-surface-100); color: var(--color-surface-900); }
+
+.lx-btn-gold {
+  background: var(--brass);
+  color: var(--color-primary-950, #0a1220);
+  font-weight: 600;
+}
+.lx-btn-gold:hover { background: var(--brass-mid); }
+
+.lx-btn-sm { height: 28px; padding: 0 10px; font-size: 12px; }
+.lx-btn-lg { height: 44px; padding: 0 20px; font-size: 14px; }
+
+/* ── Inputs ──────────────────────────────────────────────────── */
+/*
+ * Padding is split into longhands so Tailwind utilities like `pl-9`
+ * can override only padding-left without fighting the `padding`
+ * shorthand. The whole block being inside @layer components ensures
+ * utility classes (in @layer utilities) win.
+ */
+.lx-input {
+  width: 100%;
+  height: 36px;
+  padding-top: 0;
+  padding-bottom: 0;
+  padding-left: 12px;
+  padding-right: 12px;
+  border-radius: 8px;
+  border: 1px solid var(--hairline-strong);
+  background: var(--t-card-bg);
+  font-family: var(--font-sans);
+  font-size: 13px;
+  color: var(--color-surface-900);
+  transition: border-color 120ms ease, box-shadow 120ms ease;
+}
+.lx-input:focus { outline: none; border-color: var(--color-primary-500); box-shadow: 0 0 0 3px rgba(44, 82, 130, 0.12); }
+.lx-input::placeholder { color: var(--color-surface-400); }
+
+/* ── Badges / Status pills ────────────────────────────────────── */
+.lx-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 7px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 500;
+  line-height: 1.4;
+  letter-spacing: 0.005em;
+  border: 1px solid transparent;
+  white-space: nowrap;
+}
+.lx-badge-dot { width: 6px; height: 6px; border-radius: 50%; display: inline-block; }
+.lx-badge-neutral { background: var(--color-surface-100); color: var(--color-surface-700); border-color: var(--hairline); }
+.lx-badge-info    { background: var(--info-50);    color: var(--info-600);    border-color: rgba(44,77,124,0.16); }
+.lx-badge-success { background: var(--success-50); color: var(--success-600); border-color: rgba(47,107,63,0.18); }
+.lx-badge-warn    { background: var(--warning-50); color: var(--warning-600); border-color: rgba(138,105,25,0.20); }
+.lx-badge-danger  { background: var(--danger-50);  color: var(--danger-600);  border-color: rgba(145,52,35,0.18); }
+.lx-badge-gold {
+  background: rgba(184, 149, 79, 0.12);
+  color: var(--brass-dark);
+  border-color: rgba(184, 149, 79, 0.25);
+}
+
+/* ── Hairlines ────────────────────────────────────────────────── */
+.hairline   { border-top: 1px solid var(--hairline); }
+.hairline-b { border-bottom: 1px solid var(--hairline); }
+
+/* ── Top nav — underline active (Variation A) ─────────────────── */
+.lx-topnav {
+  height: 60px;
+  background: rgba(250, 248, 245, 0.85);
+  backdrop-filter: saturate(180%) blur(12px);
+  -webkit-backdrop-filter: saturate(180%) blur(12px);
+  border-bottom: 1px solid var(--hairline);
+  position: sticky;
+  top: 0;
+  z-index: 40;
+}
+.lx-nav-link {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 60px;
+  padding: 0 2px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--color-surface-600);
+  text-decoration: none;
+  transition: color 120ms ease;
+  cursor: pointer;
+  margin-bottom: -1px; /* allow the underline to sit on the nav's bottom border */
+}
+.lx-nav-link:hover { color: var(--color-surface-900); }
+.lx-nav-link.active { color: var(--color-primary-900); }
+.lx-nav-link.active::after {
+  content: "";
+  position: absolute;
+  left: 0; right: 0; bottom: 0;
+  height: 1.5px;
+  background: var(--color-primary-900);
+}
+
+/* ── Filter tabs (visible at rest, prominent when active) ─────── */
+.lx-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 32px;
+  padding: 0 12px;
+  border-radius: 6px;
+  font-family: var(--font-sans);
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: -0.005em;
+  background: white;
+  color: var(--color-surface-700);
+  border: 1px solid var(--hairline-strong);
+  cursor: pointer;
+  transition: background 120ms, color 120ms, border-color 120ms, box-shadow 120ms;
+  white-space: nowrap;
+}
+.lx-tab:hover {
+  background: var(--color-surface-50);
+  color: var(--color-surface-900);
+  border-color: var(--color-surface-300);
+}
+.lx-tab.active {
+  background: var(--color-primary-900);
+  color: white;
+  border-color: var(--color-primary-900);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.08), 0 1px 2px rgba(15,27,45,0.18);
+}
+.lx-tab .lx-tab-count {
+  font-size: 11px;
+  padding: 1px 6px;
+  border-radius: 999px;
+  background: var(--color-surface-100);
+  color: var(--color-surface-600);
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+}
+.lx-tab.active .lx-tab-count {
+  background: rgba(255,255,255,0.12);
+  color: rgba(255,255,255,0.85);
+}
+
+/* Sub-tabs (dashboard sub-nav) */
+.lx-subtab {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 44px;
+  padding: 0 12px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--color-surface-500);
+  border-bottom: 2px solid transparent;
+  cursor: pointer;
+  transition: color 120ms, border-color 120ms;
+  text-decoration: none;
+}
+.lx-subtab:hover { color: var(--color-surface-800); }
+.lx-subtab.active { color: var(--color-primary-900); border-bottom-color: var(--color-primary-900); }
+
+/* ── Table (bordered card, Variation A) ───────────────────────── */
+.lx-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+}
+.lx-table thead th {
+  text-align: left;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--color-surface-500);
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--hairline);
+  background: var(--color-surface-100);
+  white-space: nowrap;
+}
+.lx-table tbody td {
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--hairline);
+  color: var(--color-surface-800);
+  vertical-align: middle;
+}
+.lx-table tbody tr:hover { background: var(--color-surface-50); }
+.lx-table tbody tr:last-child td { border-bottom: none; }
+.lx-table .num { text-align: right; font-variant-numeric: tabular-nums; }
+
+/* ── KPI (Variation A — Minimal) ──────────────────────────────── */
+.lx-kpi-row {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  background: white;
+  border: 1px solid var(--hairline);
+  border-radius: 10px;
+  overflow: hidden;
+}
+.lx-kpi-row > .lx-kpi {
+  padding: 18px 20px;
+  border-right: 1px solid var(--hairline);
+}
+.lx-kpi-row > .lx-kpi:last-child { border-right: none; }
+.lx-kpi-label {
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  font-weight: 600;
+  color: var(--color-surface-500);
+  margin-bottom: 10px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.lx-kpi-value {
+  font-family: var(--font-heading);
+  font-size: 28px;
+  line-height: 1;
+  font-weight: 500;
+  letter-spacing: -0.02em;
+  color: var(--color-primary-950, #0a1220);
+  font-variant-numeric: tabular-nums;
+}
+.lx-kpi-meta {
+  margin-top: 6px;
+  font-size: 12px;
+  color: var(--color-surface-500);
+}
+.lx-kpi-clickable { display: block; text-decoration: none; transition: background 120ms ease; }
+.lx-kpi-clickable:hover { background: var(--color-surface-50); }
+
+@media (max-width: 768px) {
+  .lx-kpi-row { grid-template-columns: repeat(2, 1fr); }
+  .lx-kpi-row > .lx-kpi:nth-child(2) { border-right: none; }
+  .lx-kpi-row > .lx-kpi:nth-child(-n+2) { border-bottom: 1px solid var(--hairline); }
+}
+
+/* Avatar tones (deterministic) */
+.lx-avatar {
+  width: 36px; height: 36px;
+  border-radius: 50%;
+  background: var(--color-surface-150, #ece8e0);
+  color: var(--color-primary-900);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-sans);
+  font-size: 12px;
+  font-weight: 600;
+  border: 1px solid var(--hairline);
+  flex-shrink: 0;
+}
+.lx-avatar-sm { width: 28px; height: 28px; font-size: 11px; }
+.lx-avatar-lg { width: 56px; height: 56px; font-size: 16px; }
+.lx-avatar-xl { width: 80px; height: 80px; font-size: 22px; }
+.lx-avatar-tone-1 { background: #e8eef6; color: #1e3a5f; }
+.lx-avatar-tone-2 { background: #f1ece1; color: #5a4520; }
+.lx-avatar-tone-3 { background: #e8efe9; color: #2f6b3f; }
+.lx-avatar-tone-4 { background: #efe9ea; color: #8a3a2a; }
+.lx-avatar-tone-5 { background: #ebe9ef; color: #3d3680; }
+
+/* Gold rule */
+.gold-rule {
+  display: inline-block;
+  height: 1px;
+  width: 56px;
+  background: linear-gradient(to right, transparent, var(--brass), transparent);
+}
+
+} /* end @layer components */
+
 @theme {
   /* ── Courtroom Navy Blues ─────────────────────────────────────── */
   --color-primary-50: #f0f3f8;
@@ -138,26 +555,38 @@ body {
   font-variation-settings: 'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 24;
 }
 
-/* ── Custom Scrollbar ─────────────────────────────────────────── */
+/* ── Custom Scrollbar (parchment + walnut) ───────────────────── */
 ::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
+  width: 11px;
+  height: 11px;
 }
 
 ::-webkit-scrollbar-track {
-  background: var(--color-surface-50);
+  background: transparent;
 }
 
+/*
+ * Thumb uses a muted walnut tone that sits naturally over the
+ * parchment surfaces; a 3px transparent "border" gives it a floating
+ * pill silhouette so it never feels chunky against light backgrounds.
+ */
 ::-webkit-scrollbar-thumb {
-  background: var(--color-primary-400);
-  border-radius: 4px;
+  background: var(--color-surface-300, #c9c1b2);
+  border-radius: 999px;
+  border: 3px solid transparent;
+  background-clip: padding-box;
+  transition: background-color 120ms ease;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: var(--color-primary-600);
+  background: var(--brass-mid, #a07c3a);
+  background-clip: padding-box;
 }
 
+::-webkit-scrollbar-corner { background: transparent; }
+
+/* Firefox — match the WebKit thumb/track colors above */
 * {
   scrollbar-width: thin;
-  scrollbar-color: var(--color-primary-400) var(--color-surface-50);
+  scrollbar-color: var(--color-surface-300, #c9c1b2) transparent;
 }

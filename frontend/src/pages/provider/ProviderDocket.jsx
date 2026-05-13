@@ -242,34 +242,28 @@ export default function ProviderDocket() {
         />
       )}
 
-      <div className="max-w-[1920px] mx-auto p-6 md:p-12 font-sans bg-transparent">
-        <header className="mb-10 border-b border-surface-200 pb-6">
-          <h1 className="font-heading text-4xl text-primary-900">The Docket</h1>
-          <p className="font-sans text-lg text-surface-500 mt-2">Your operational workspace — review case requests, manage open cases, and complete consultations.</p>
+      <div className="max-w-[1440px] mx-auto px-6 md:px-8 pt-6 pb-12 font-sans bg-transparent">
+        <header className="mb-8 pb-5" style={{ borderBottom: '1px solid var(--hairline)' }}>
+          <h1 className="lx-h1">The Docket</h1>
+          <p className="body mt-1">Your operational workspace — review case requests, manage open cases, and complete consultations.</p>
         </header>
 
-        {/* Workflow summary strip */}
-        <div className="grid grid-cols-3 gap-3 mb-10">
-          <div className="bg-white p-4 rounded-lg border border-surface-200 flex items-center gap-3">
-            <div className="w-9 h-9 rounded bg-yellow-50 text-yellow-700 flex items-center justify-center"><FileText size={16} /></div>
-            <div>
-              <p className="text-[10px] font-bold uppercase tracking-widest text-surface-500">New Requests</p>
-              <p className="font-heading text-lg text-primary-900 leading-tight">{petitions.length}</p>
-            </div>
+        {/* Workflow KPI row — Variation A */}
+        <div className="lx-kpi-row mb-10" style={{ gridTemplateColumns: 'repeat(3, 1fr)' }}>
+          <div className="lx-kpi">
+            <div className="lx-kpi-label">New requests</div>
+            <div className="lx-kpi-value">{petitions.length}</div>
+            <div className="lx-kpi-meta">{petitions.length === 0 ? 'No new requests' : 'Awaiting your acceptance'}</div>
           </div>
-          <div className="bg-white p-4 rounded-lg border border-surface-200 flex items-center gap-3">
-            <div className="w-9 h-9 rounded bg-blue-50 text-blue-700 flex items-center justify-center"><Activity size={16} /></div>
-            <div>
-              <p className="text-[10px] font-bold uppercase tracking-widest text-surface-500">Open Cases</p>
-              <p className="font-heading text-lg text-primary-900 leading-tight">{activePetitions.length}</p>
-            </div>
+          <div className="lx-kpi">
+            <div className="lx-kpi-label">Open cases</div>
+            <div className="lx-kpi-value">{activePetitions.length}</div>
+            <div className="lx-kpi-meta">In active management</div>
           </div>
-          <div className="bg-white p-4 rounded-lg border border-surface-200 flex items-center gap-3">
-            <div className="w-9 h-9 rounded bg-accent-50 text-accent-600 flex items-center justify-center"><Clock size={16} /></div>
-            <div>
-              <p className="text-[10px] font-bold uppercase tracking-widest text-surface-500">Consultations</p>
-              <p className="font-heading text-lg text-primary-900 leading-tight">{activeCases.length}</p>
-            </div>
+          <div className="lx-kpi">
+            <div className="lx-kpi-label">Consultations</div>
+            <div className="lx-kpi-value">{activeCases.length}</div>
+            <div className="lx-kpi-meta">Linked to open cases</div>
           </div>
         </div>
 
@@ -277,12 +271,12 @@ export default function ProviderDocket() {
 
           {/* ── Incoming Case Requests ── */}
           <section>
-            <div className="mb-6">
-              <h2 className="font-heading text-2xl text-primary-900 flex items-center gap-2">
-                <FileText className="text-accent-300" /> Incoming Case Requests
-                <span className="ml-1 text-base text-surface-400 font-sans font-normal">({petitions.length})</span>
+            <div className="mb-5">
+              <h2 className="lx-h2 flex items-center gap-2">
+                <FileText size={18} className="text-[var(--brass-mid)]" /> Incoming Case Requests
+                <span className="muted body-sm" style={{ fontWeight: 400 }}>({petitions.length})</span>
               </h2>
-              <p className="text-sm text-surface-500 mt-1">New petitions awaiting your acceptance — accepting auto-schedules a consultation.</p>
+              <p className="body mt-1">New petitions awaiting your acceptance — accepting auto-schedules a consultation.</p>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
               {petitions.length === 0 ? (
@@ -352,12 +346,12 @@ export default function ProviderDocket() {
           {/* ── Active Petitions (accepted, in-progress, etc.) ── */}
           {activePetitions.length > 0 && (
             <section>
-              <div className="mb-6">
-                <h2 className="font-heading text-2xl text-primary-900 flex items-center gap-2">
-                  <Activity className="text-accent-300" /> Open Cases
-                  <span className="ml-1 text-base text-surface-400 font-sans font-normal">({activePetitions.length})</span>
+              <div className="mb-5">
+                <h2 className="lx-h2 flex items-center gap-2">
+                  <Activity size={18} className="text-[var(--brass-mid)]" /> Open Cases
+                  <span className="muted body-sm" style={{ fontWeight: 400 }}>({activePetitions.length})</span>
                 </h2>
-                <p className="text-sm text-surface-500 mt-1">Accepted cases currently in progress — update status as the engagement evolves.</p>
+                <p className="body mt-1">Accepted cases currently in progress — update status as the engagement evolves.</p>
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                 {activePetitions.map((petition, i) => {
@@ -415,82 +409,93 @@ export default function ProviderDocket() {
 
           {/* ── Scheduled Consultations ── */}
           <section>
-            <div className="mb-6">
-              <h2 className="font-heading text-2xl text-primary-900 flex items-center gap-2">
-                <Clock className="text-accent-300" /> Scheduled Consultations
-                <span className="ml-1 text-base text-surface-400 font-sans font-normal">({activeCases.length})</span>
+            <div className="mb-5">
+              <h2 className="lx-h2 flex items-center gap-2">
+                <Clock size={18} className="text-[var(--brass-mid)]" /> Scheduled Consultations
+                <span className="muted body-sm" style={{ fontWeight: 400 }}>({activeCases.length})</span>
               </h2>
-              <p className="text-sm text-surface-500 mt-1">Sessions linked to your open cases — marking complete generates a transaction and resolves the related case.</p>
+              <p className="body mt-1">Sessions linked to your open cases — marking complete generates a transaction and resolves the related case.</p>
             </div>
-            <div className="bg-white rounded-xl border border-surface-200 shadow-sm overflow-hidden">
+            <div className="lx-card" style={{ overflow: 'hidden' }}>
               <div className="overflow-x-auto">
-                <table className="w-full text-left border-collapse">
+                <table className="lx-table">
                   <thead>
-                    <tr className="bg-surface-50 border-b border-surface-200">
-                      <th className="font-sans text-xs uppercase tracking-widest font-bold text-surface-500 p-4">Client</th>
-                      <th className="font-sans text-xs uppercase tracking-widest font-bold text-surface-500 p-4">Case Type</th>
-                      <th className="font-sans text-xs uppercase tracking-widest font-bold text-surface-500 p-4">Date & Time</th>
-                      <th className="font-sans text-xs uppercase tracking-widest font-bold text-surface-500 p-4">Status</th>
-                      <th className="font-sans text-xs uppercase tracking-widest font-bold text-surface-500 p-4">Actions</th>
+                    <tr>
+                      <th>Client</th>
+                      <th>Case type</th>
+                      <th>Date &amp; time</th>
+                      <th>Status</th>
+                      <th style={{ textAlign: 'right' }}>Actions</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-surface-100">
+                  <tbody>
                     {activeCases.length === 0 ? (
                       <tr>
-                        <td colSpan="5" className="p-10 text-center">
-                          <Clock size={32} className="mx-auto text-surface-300 mb-2" />
-                          <p className="text-surface-700 font-semibold">No scheduled consultations</p>
-                          <p className="text-sm text-surface-500 mt-1">Accepted petitions auto-create a consultation that will appear here.</p>
+                        <td colSpan="5" className="!p-10 text-center">
+                          <Clock size={28} className="mx-auto text-surface-300 mb-2" />
+                          <p className="strong" style={{ fontSize: 14 }}>No scheduled consultations</p>
+                          <p className="body-sm muted mt-1">Accepted petitions auto-create a consultation that will appear here.</p>
                         </td>
                       </tr>
                     ) : (
                       activeCases.map((c, i) => {
                         const cId = c._id || c.id;
+                        const badgeCls =
+                          c.status === 'pending' ? 'lx-badge-warn' :
+                          c.status === 'in-progress' ? 'lx-badge-info' :
+                          'lx-badge-success';
+                        const dotColor =
+                          c.status === 'pending' ? 'var(--warning-600)' :
+                          c.status === 'in-progress' ? 'var(--info-600)' :
+                          'var(--success-600)';
                         return (
-                        <tr key={cId || i} className="hover:bg-surface-50 transition-colors">
-                          <td className="p-4">
-                            <p className="font-heading text-primary-900 font-semibold">{c.citizen_name}</p>
+                        <tr key={cId || i}>
+                          <td>
+                            <p className="strong">{c.citizen_name}</p>
                             {c.petition_code && (
-                              <p className="text-[11px] font-mono text-surface-400 mt-0.5">Case {c.petition_code}</p>
+                              <p className="mono body-xs" style={{ color: 'var(--color-surface-500)' }}>{c.petition_code}</p>
                             )}
                           </td>
-                          <td className="p-4 text-sm text-surface-600">{c.type}</td>
-                          <td className="p-4 text-sm text-surface-600">
-                            <span className="flex items-center gap-2">
-                              <Calendar size={13} className="text-surface-400" /> {c.date} — {c.time}
+                          <td className="muted">{c.type}</td>
+                          <td className="body-sm">
+                            <span className="inline-flex items-center gap-1.5">
+                              <Calendar size={12} className="text-surface-400" /> {c.date} · {c.time}
                             </span>
                           </td>
-                          <td className="p-4">
-                            <span className={`text-xs font-bold uppercase tracking-widest px-2 py-1 rounded ${CASE_STATUS_STYLE[c.status] || 'bg-surface-100 text-surface-600'}`}>
-                              {c.status}
+                          <td>
+                            <span className={`lx-badge ${badgeCls}`}>
+                              <span className="lx-badge-dot" style={{ background: dotColor }} />
+                              {(c.status || '').replace(/-/g, ' ')}
                             </span>
                           </td>
-                          <td className="p-4">
-                            <div className="flex items-center gap-2">
+                          <td>
+                            <div className="flex items-center gap-1.5 justify-end">
                               {c.status === 'pending' ? (
                                 <>
                                   <button
                                     onClick={() => handleAcceptAppointment(cId)}
                                     disabled={actionLoading === cId}
-                                    className="text-xs font-bold uppercase tracking-widest text-primary-700 border border-primary-700 px-3 py-1.5 rounded hover:bg-primary-700 hover:text-white transition-colors cursor-pointer disabled:opacity-50 flex items-center gap-1"
+                                    className="lx-btn lx-btn-secondary lx-btn-sm"
                                   >
-                                    <Check size={13} /> Accept
+                                    <Check size={12} /> Accept
                                   </button>
                                   <button
                                     onClick={() => handleDeclineAppointment(cId)}
                                     disabled={actionLoading === cId}
-                                    className="text-xs font-bold uppercase tracking-widest text-red-700 border border-red-700 px-3 py-1.5 rounded hover:bg-red-700 hover:text-white transition-colors cursor-pointer disabled:opacity-50 flex items-center gap-1"
+                                    className="lx-btn lx-btn-ghost lx-btn-sm"
+                                    style={{ color: 'var(--danger-600)' }}
                                   >
-                                    <XCircle size={13} /> Decline
+                                    <XCircle size={12} /> Decline
                                   </button>
                                 </>
                               ) : (
                                 <button
                                   onClick={() => handleComplete(cId)}
                                   disabled={actionLoading === cId}
-                                  className="text-xs font-bold uppercase tracking-widest text-green-700 border border-green-700 px-3 py-1.5 rounded hover:bg-green-700 hover:text-white transition-colors cursor-pointer disabled:opacity-50 flex items-center gap-1"
+                                  className="lx-btn lx-btn-sm"
+                                  style={{ background: 'var(--success-600)', color: 'white' }}
                                 >
-                                  <CheckCircle2 size={13} /> Complete
+                                  <CheckCircle2 size={12} /> Complete
                                 </button>
                               )}
                             </div>

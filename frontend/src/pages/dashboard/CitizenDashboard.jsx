@@ -111,64 +111,42 @@ export default function CitizenDashboard() {
   }
 
   return (
-    <div className="max-w-[1920px] mx-auto p-6 md:p-12 font-sans bg-transparent">
+    <div className="max-w-[1440px] mx-auto px-6 md:px-8 pt-6 pb-12 font-sans bg-transparent">
       <motion.header
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
         className="mb-8 border-b border-surface-200 pb-5 flex flex-col sm:flex-row sm:justify-between sm:items-end gap-4"
       >
         <div>
-          <h1 className="font-heading text-3xl md:text-4xl text-primary-900">Welcome, {user?.name || 'Citizen'}</h1>
-          <p className="font-sans text-base md:text-lg text-surface-500 mt-1.5">Your active legal cases and upcoming consultations, in one place.</p>
+          <h1 className="lx-h1">Welcome, {user?.name || 'Citizen'}</h1>
+          <p className="body mt-1">Your active legal cases and upcoming consultations, in one place.</p>
         </div>
-        <Link to="/providers" className="bg-primary-800 text-white font-sans text-xs uppercase tracking-widest font-bold px-6 py-3 rounded hover:bg-primary-700 transition-colors shrink-0">
+        <Link to="/providers" className="lx-btn lx-btn-primary shrink-0">
           Find Counsel
         </Link>
       </motion.header>
 
-      {/* Workflow Summary — distinct from sections below */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4 mb-6">
-        <Link to="/citizen/petitions" className="bg-white p-5 rounded-xl border border-surface-200 shadow-sm hover:border-primary-400 hover:shadow-md transition-all group">
-          <div className="flex items-start justify-between mb-3">
-            <div className="w-10 h-10 bg-primary-50 text-primary-700 rounded-lg flex items-center justify-center">
-              <Briefcase size={18} />
-            </div>
-            <ChevronRight size={16} className="text-surface-300 group-hover:text-primary-500 transition-colors" />
-          </div>
-          <p className="text-3xl font-heading text-primary-900 leading-none">{dashboardData.summary.activeCases}</p>
-          <p className="text-xs font-bold uppercase tracking-widest text-surface-500 mt-2">Active Cases</p>
+      {/* Minimal KPI row — Variation A (single shared border, hairline dividers) */}
+      <div className="lx-kpi-row mb-6">
+        <Link to="/citizen/petitions" className="lx-kpi lx-kpi-clickable">
+          <div className="lx-kpi-label">Active cases</div>
+          <div className="lx-kpi-value">{dashboardData.summary.activeCases}</div>
+          <div className="lx-kpi-meta">{dashboardData.summary.activeCases === 0 ? 'No active cases yet' : 'Tap to manage'}</div>
         </Link>
-
-        <div className="bg-white p-5 rounded-xl border border-surface-200 shadow-sm">
-          <div className="flex items-start justify-between mb-3">
-            <div className="w-10 h-10 bg-accent-50 text-accent-600 rounded-lg flex items-center justify-center">
-              <Calendar size={18} />
-            </div>
-          </div>
-          <p className="text-3xl font-heading text-primary-900 leading-none">{dashboardData.summary.upcomingCount}</p>
-          <p className="text-xs font-bold uppercase tracking-widest text-surface-500 mt-2">Upcoming Consults</p>
+        <div className="lx-kpi">
+          <div className="lx-kpi-label">Upcoming consults</div>
+          <div className="lx-kpi-value">{dashboardData.summary.upcomingCount}</div>
+          <div className="lx-kpi-meta">{dashboardData.summary.upcomingCount === 0 ? '—' : 'Scheduled this week'}</div>
         </div>
-
-        <Link to="/citizen/history" className={`bg-white p-5 rounded-xl border shadow-sm hover:shadow-md transition-all group ${dashboardData.summary.pendingReviews > 0 ? 'border-amber-300 ring-1 ring-amber-100' : 'border-surface-200 hover:border-primary-400'}`}>
-          <div className="flex items-start justify-between mb-3">
-            <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${dashboardData.summary.pendingReviews > 0 ? 'bg-amber-50 text-amber-600' : 'bg-surface-50 text-surface-500'}`}>
-              <Star size={18} />
-            </div>
-            <ChevronRight size={16} className="text-surface-300 group-hover:text-primary-500 transition-colors" />
-          </div>
-          <p className="text-3xl font-heading text-primary-900 leading-none">{dashboardData.summary.pendingReviews}</p>
-          <p className="text-xs font-bold uppercase tracking-widest text-surface-500 mt-2">Pending Reviews</p>
+        <Link to="/citizen/history" className="lx-kpi lx-kpi-clickable">
+          <div className="lx-kpi-label">Pending reviews</div>
+          <div className="lx-kpi-value">{dashboardData.summary.pendingReviews}</div>
+          <div className="lx-kpi-meta">{dashboardData.summary.pendingReviews > 0 ? 'Awaiting your feedback' : 'All caught up'}</div>
         </Link>
-
-        <Link to="/citizen/history" className="bg-white p-5 rounded-xl border border-surface-200 shadow-sm hover:border-primary-400 hover:shadow-md transition-all group">
-          <div className="flex items-start justify-between mb-3">
-            <div className="w-10 h-10 bg-green-50 text-green-600 rounded-lg flex items-center justify-center">
-              <Archive size={18} />
-            </div>
-            <ChevronRight size={16} className="text-surface-300 group-hover:text-primary-500 transition-colors" />
-          </div>
-          <p className="text-3xl font-heading text-primary-900 leading-none">{dashboardData.summary.resolvedCases}</p>
-          <p className="text-xs font-bold uppercase tracking-widest text-surface-500 mt-2">Resolved Cases</p>
+        <Link to="/citizen/history" className="lx-kpi lx-kpi-clickable">
+          <div className="lx-kpi-label">Resolved cases</div>
+          <div className="lx-kpi-value">{dashboardData.summary.resolvedCases}</div>
+          <div className="lx-kpi-meta">{dashboardData.summary.resolvedCases === 0 ? '—' : 'Archive of past matters'}</div>
         </Link>
       </div>
 
@@ -196,16 +174,16 @@ export default function CitizenDashboard() {
           className="lg:col-span-8 space-y-6"
         >
           {/* Upcoming Consultations */}
-          <div className="bg-white rounded-xl border border-surface-200 shadow-sm overflow-hidden">
-            <div className="p-5 border-b border-surface-100 flex justify-between items-center bg-surface-50">
+          <div>
+            <div className="flex items-end justify-between mb-3">
               <div>
-                <h2 className="text-lg font-heading font-semibold flex items-center gap-2 text-surface-900">
-                  <Calendar size={20} className="text-accent-400" /> Upcoming Consultations
-                </h2>
-                <p className="text-xs text-surface-500 mt-0.5">Scheduled sessions linked to your active cases</p>
+                <h2 className="lx-h3 flex items-center gap-2"><Calendar size={15} className="text-[var(--brass-mid)]" /> Upcoming Consultations</h2>
+                <p className="body-xs mt-0.5">Scheduled sessions linked to your active cases</p>
               </div>
-              <Link to="/citizen/petitions" className="text-xs font-bold uppercase tracking-widest text-primary-600 hover:underline">All Cases</Link>
+              <Link to="/citizen/petitions" className="body-sm text-[var(--color-primary-700)] hover:underline">All cases →</Link>
             </div>
+
+            <div className="lx-card" style={{ overflow: 'hidden' }}>
             <div className="divide-y divide-surface-100">
               {dashboardData.upcomingAppointments.length === 0 ? (
                 <div className="p-10 text-center border border-dashed border-surface-200 m-4 rounded-lg">
@@ -258,55 +236,72 @@ export default function CitizenDashboard() {
                 })
               )}
             </div>
+            </div>
           </div>
 
-
-
-          {/* Recent Cases — feedback loop showing the citizen their filed cases */}
-          <div className="bg-white rounded-xl border border-surface-200 shadow-sm overflow-hidden">
-            <div className="p-5 border-b border-surface-100 flex justify-between items-center bg-surface-50">
+          {/* Recent Cases — Variation A: inline status table */}
+          <div>
+            <div className="flex items-end justify-between mb-3">
               <div>
-                <h2 className="text-lg font-heading font-semibold flex items-center gap-2 text-surface-900">
-                  <Briefcase size={20} className="text-primary-700" /> My Recent Cases
-                </h2>
-                <p className="text-xs text-surface-500 mt-0.5">Open legal matters you've filed</p>
+                <h2 className="lx-h3 flex items-center gap-2"><Briefcase size={15} className="text-[var(--color-primary-700)]" /> My Recent Cases</h2>
+                <p className="body-xs mt-0.5">Open legal matters you've filed</p>
               </div>
-              <Link to="/citizen/petitions" className="text-xs font-bold uppercase tracking-widest text-primary-600 hover:underline">All Cases</Link>
+              <Link to="/citizen/petitions" className="body-sm text-[var(--color-primary-700)] hover:underline">All cases →</Link>
             </div>
-            <div className="divide-y divide-surface-100">
-              {dashboardData.recentCases.length === 0 ? (
-                <div className="p-8 text-center">
-                  <Briefcase size={32} className="mx-auto text-surface-300 mb-2" />
-                  <p className="text-surface-700 font-semibold mb-1">No active legal cases</p>
-                  <p className="text-sm text-surface-500 mb-3">File a case with a verified provider to begin a legal engagement.</p>
-                  <Link to="/providers" className="text-xs font-bold uppercase tracking-widest text-primary-600 hover:underline">Browse Providers →</Link>
-                </div>
-              ) : (
-                dashboardData.recentCases.map((c, i) => {
-                  const cId = c._id || c.id;
-                  const pillCls = STATUS_PILL[c.status] || 'bg-surface-100 text-surface-700';
-                  return (
-                    <Link key={cId || i} to="/citizen/petitions" className="p-5 flex items-start justify-between gap-4 hover:bg-surface-50 transition-colors block">
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 mb-1.5">
-                          <span className="font-mono text-[11px] text-surface-400 bg-surface-100 px-1.5 py-0.5 rounded">{c.petition_id}</span>
-                          <span className={`text-[10px] font-bold uppercase tracking-widest px-2 py-0.5 rounded ${pillCls}`}>
-                            {(c.status || '').replace(/-/g, ' ')}
-                          </span>
-                        </div>
-                        <h3 className="font-heading text-base font-semibold text-surface-900 truncate">{c.provider_name}</h3>
-                        <p className="text-xs font-bold uppercase tracking-widest text-surface-400 mb-1.5">{c.type}</p>
-                        <p className="text-sm text-surface-600 line-clamp-1">{c.next_step}</p>
-                      </div>
-                      <div className="text-right shrink-0">
-                        <p className="text-[10px] font-bold uppercase tracking-widest text-surface-400">Updated</p>
-                        <p className="text-xs text-surface-600">{timeAgo(c.updated_at || c.created_at)}</p>
-                      </div>
-                    </Link>
-                  );
-                })
-              )}
-            </div>
+
+            {dashboardData.recentCases.length === 0 ? (
+              <div className="lx-card p-8 text-center">
+                <Briefcase size={28} className="mx-auto text-surface-300 mb-2" />
+                <p className="strong" style={{ fontSize: 14 }}>No active legal cases</p>
+                <p className="body-sm muted mt-1 mb-3">File a case with a verified provider to begin a legal engagement.</p>
+                <Link to="/providers" className="lx-btn lx-btn-secondary lx-btn-sm">Browse Providers</Link>
+              </div>
+            ) : (
+              <div className="lx-card" style={{ overflow: 'hidden' }}>
+                <table className="lx-table">
+                  <thead>
+                    <tr>
+                      <th>Case</th>
+                      <th>Provider</th>
+                      <th>Status</th>
+                      <th className="num">Updated</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {dashboardData.recentCases.map((c, i) => {
+                      const cId = c._id || c.id;
+                      const status = c.status || 'pending';
+                      const badgeCls =
+                        ['resolved', 'closed', 'completed'].includes(status) ? 'lx-badge-success' :
+                        ['under-review', 'in-progress', 'accepted'].includes(status) ? 'lx-badge-info' :
+                        ['awaiting-documents', 'pending'].includes(status) ? 'lx-badge-warn' :
+                        'lx-badge-neutral';
+                      const dotColor =
+                        badgeCls === 'lx-badge-success' ? 'var(--success-600)' :
+                        badgeCls === 'lx-badge-info' ? 'var(--info-600)' :
+                        badgeCls === 'lx-badge-warn' ? 'var(--warning-600)' :
+                        'var(--color-surface-500)';
+                      return (
+                        <tr key={cId || i} onClick={() => window.location.assign('/citizen/petitions')} style={{ cursor: 'pointer' }}>
+                          <td><span className="mono" style={{ fontSize: 12 }}>{c.petition_id}</span></td>
+                          <td>
+                            <p className="strong">{c.provider_name}</p>
+                            <p className="body-xs muted">{c.type}</p>
+                          </td>
+                          <td>
+                            <span className={`lx-badge ${badgeCls}`}>
+                              <span className="lx-badge-dot" style={{ background: dotColor }} />
+                              {status.replace(/-/g, ' ')}
+                            </span>
+                          </td>
+                          <td className="num body-xs muted">{timeAgo(c.updated_at || c.created_at)}</td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )}
           </div>
         </motion.div>
 
@@ -317,12 +312,10 @@ export default function CitizenDashboard() {
           transition={{ delay: 0.2 }}
           className="lg:col-span-4 space-y-6"
         >
-          <div className="bg-white rounded-xl border border-surface-200 shadow-sm overflow-hidden">
-            <div className="p-5 border-b border-surface-100 bg-surface-50">
-              <h2 className="text-lg font-heading font-semibold flex items-center gap-2 text-surface-900">
-                <Star size={20} className="text-accent-300" /> Recommended Counsel
-              </h2>
-              <p className="text-xs text-surface-500 mt-0.5">Top-rated verified practitioners</p>
+          <div className="lx-card" style={{ overflow: 'hidden' }}>
+            <div className="px-5 py-4 hairline-b">
+              <h2 className="lx-h3 flex items-center gap-2"><Star size={15} className="text-[var(--brass)]" /> Recommended Counsel</h2>
+              <p className="body-xs mt-0.5">Top-rated verified practitioners</p>
             </div>
             <div className="divide-y divide-surface-100">
               {dashboardData.savedProviders.length === 0 ? (

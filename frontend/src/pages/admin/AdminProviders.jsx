@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router';
-import { UserCheck, UserX, Clock, MapPin, Briefcase, Calendar, Eye, ChevronDown, Trash2 } from 'lucide-react';
-import { themeToast, themeAlert } from '../../utils/alert';
+import { UserCheck, UserX, Clock, MapPin, Briefcase, Calendar, ChevronDown, Trash2 } from 'lucide-react';
+import { themeToast } from '../../utils/alert';
+import { formatPriceRange, formatRupees } from '../../utils/formatters';
 
 const API = import.meta.env.VITE_API_URL || 'http://localhost:8000/api';
 
@@ -103,23 +104,21 @@ export default function AdminProviders() {
   };
 
   return (
-    <div className="max-w-[1400px] mx-auto px-6 py-8">
-      <div className="mb-8">
-        <h1 className="font-heading text-3xl text-surface-900 mb-1">Provider Management</h1>
-        <p className="font-sans text-surface-500">Review, approve, or reject provider applications</p>
+    <div className="max-w-[1440px] mx-auto px-6 md:px-8 pt-6 pb-12">
+      <div className="mb-7">
+        <h1 className="lx-h1">Provider Management</h1>
+        <p className="body mt-1">Review, approve, or reject provider applications.</p>
       </div>
 
       {/* Tabs */}
-      <div className="flex gap-1 bg-surface-100 rounded-xl p-1 border border-surface-200 mb-6 w-fit">
-        {TABS.map(({ id, label, icon: Icon, color }) => (
-          <button key={id} onClick={() => switchTab(id)}
-            className={`flex items-center gap-2 px-5 py-2.5 rounded-lg font-sans text-sm font-medium transition-all cursor-pointer ${
-              activeTab === id
-                ? 'bg-white shadow-sm border border-surface-200 text-surface-900'
-                : 'text-surface-500 hover:text-surface-700'
-            }`}
+      <div className="flex gap-2 mb-5 flex-wrap">
+        {TABS.map(({ id, label, icon: Icon }) => (
+          <button
+            key={id}
+            onClick={() => switchTab(id)}
+            className={`lx-tab ${activeTab === id ? 'active' : ''}`}
           >
-            <Icon size={16} className={activeTab === id ? color : ''} />
+            <Icon size={13} />
             {label}
           </button>
         ))}
@@ -127,12 +126,13 @@ export default function AdminProviders() {
 
       {/* Provider List */}
       {loading ? (
-        <div className="space-y-4">
-          {[1,2,3].map(i => <div key={i} className="h-24 bg-white rounded-xl border border-surface-200 animate-pulse" />)}
+        <div className="space-y-3">
+          {[1,2,3].map(i => <div key={i} className="h-24 lx-card animate-pulse" />)}
         </div>
       ) : providers.length === 0 ? (
-        <div className="text-center py-16 bg-white rounded-xl border border-surface-200">
-          <p className="text-surface-500 font-heading text-lg">No {activeTab} providers</p>
+        <div className="lx-card p-12 text-center">
+          <p className="strong" style={{ fontSize: 14 }}>No {activeTab} providers</p>
+          <p className="body-sm muted mt-1">Nothing to review here right now.</p>
         </div>
       ) : (
         <div className="space-y-3">
@@ -216,8 +216,8 @@ export default function AdminProviders() {
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm font-sans">
                     {p.specialization && <div><span className="text-surface-500 font-bold text-xs uppercase tracking-widest">Specialization:</span> <span className="text-surface-700 block">{p.specialization}</span></div>}
                     {p.languages?.length > 0 && <div><span className="text-surface-500 font-bold text-xs uppercase tracking-widest">Languages:</span> <span className="text-surface-700 block">{p.languages.join(', ')}</span></div>}
-                    {p.price_range && <div><span className="text-surface-500 font-bold text-xs uppercase tracking-widest">Price Range:</span> <span className="text-surface-700 block">{p.price_range}</span></div>}
-                    {p.consultation_fee && <div><span className="text-surface-500 font-bold text-xs uppercase tracking-widest">Consultation Fee:</span> <span className="text-surface-700 block">₹{p.consultation_fee}</span></div>}
+                    {p.price_range && <div><span className="label">Price Range:</span> <span className="text-surface-700 block tabular">{formatPriceRange(p.price_range)}</span></div>}
+                    {p.consultation_fee && <div><span className="label">Consultation Fee:</span> <span className="text-surface-700 block tabular">{formatRupees(p.consultation_fee, { emptyDash: false })}</span></div>}
                   </div>
                   {p.bio && (
                     <div className="mt-3">

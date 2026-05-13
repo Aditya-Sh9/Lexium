@@ -87,7 +87,7 @@ export default function AdminEscrow() {
 
   if (loading) {
     return (
-      <div className="max-w-[1400px] mx-auto px-6 py-8">
+      <div className="max-w-[1440px] mx-auto px-6 md:px-8 pt-6 pb-12">
         <div className="grid grid-cols-3 gap-4 mb-6">
           {[1, 2, 3].map(i => <div key={i} className="h-28 bg-white rounded-xl border border-surface-200 animate-pulse" />)}
         </div>
@@ -97,108 +97,85 @@ export default function AdminEscrow() {
   }
 
   return (
-    <div className="max-w-[1400px] mx-auto px-6 py-8">
+    <div className="max-w-[1440px] mx-auto px-6 md:px-8 pt-6 pb-12">
       <div className="mb-8">
-        <h1 className="font-heading text-3xl text-surface-900 mb-1 flex items-center gap-3">
-          <Lock size={26} className="text-amber-600" /> Escrow Management
+        <h1 className="lx-h1 flex items-center gap-3">
+          <Lock size={22} className="text-[var(--warning-600)]" /> Escrow Management
         </h1>
-        <p className="font-sans text-surface-500">Review transactions held in escrow and release funds once the related case is resolved.</p>
+        <p className="body mt-1">Review transactions held in escrow and release funds once the related case is resolved.</p>
       </div>
 
-      {/* Summary cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-        <div className="bg-white rounded-xl border border-amber-200 p-5 shadow-sm">
-          <div className="flex items-center gap-3 mb-3">
-            <div className="w-10 h-10 rounded-lg bg-amber-50 text-amber-700 flex items-center justify-center">
-              <Lock size={18} />
-            </div>
-            <p className="font-sans text-xs uppercase tracking-widest font-bold text-surface-500">Total Held</p>
-          </div>
-          <p className="font-heading text-3xl text-primary-900 font-bold">{formatRupees(data.summary.totalHeld, { emptyDash: false })}</p>
-          <p className="text-xs text-surface-500 mt-1">Across {data.summary.count} escrow transaction{data.summary.count !== 1 ? 's' : ''}</p>
+      {/* Summary KPI row — Variation A */}
+      <div className="lx-kpi-row mb-6" style={{ gridTemplateColumns: 'repeat(3, 1fr)' }}>
+        <div className="lx-kpi">
+          <div className="lx-kpi-label">Total held</div>
+          <div className="lx-kpi-value">{formatRupees(data.summary.totalHeld, { emptyDash: false })}</div>
+          <div className="lx-kpi-meta">Across {data.summary.count} escrow transaction{data.summary.count !== 1 ? 's' : ''}</div>
         </div>
-
-        <div className="bg-white rounded-xl border border-green-200 p-5 shadow-sm">
-          <div className="flex items-center gap-3 mb-3">
-            <div className="w-10 h-10 rounded-lg bg-green-50 text-green-700 flex items-center justify-center">
-              <CheckCircle2 size={18} />
-            </div>
-            <p className="font-sans text-xs uppercase tracking-widest font-bold text-surface-500">Releasable</p>
-          </div>
-          <p className="font-heading text-3xl text-primary-900 font-bold">{data.summary.releasable}</p>
-          <p className="text-xs text-green-700 mt-1">Cases resolved — funds ready for clearance</p>
+        <div className="lx-kpi">
+          <div className="lx-kpi-label">Releasable</div>
+          <div className="lx-kpi-value" style={data.summary.releasable > 0 ? { color: 'var(--success-600)' } : undefined}>{data.summary.releasable}</div>
+          <div className="lx-kpi-meta">Cases resolved — ready for clearance</div>
         </div>
-
-        <div className="bg-white rounded-xl border border-surface-200 p-5 shadow-sm">
-          <div className="flex items-center gap-3 mb-3">
-            <div className="w-10 h-10 rounded-lg bg-surface-100 text-surface-600 flex items-center justify-center">
-              <AlertCircle size={18} />
-            </div>
-            <p className="font-sans text-xs uppercase tracking-widest font-bold text-surface-500">Blocked by Case</p>
-          </div>
-          <p className="font-heading text-3xl text-primary-900 font-bold">{data.summary.blockedByCase}</p>
-          <p className="text-xs text-surface-500 mt-1">Awaiting provider to resolve the case</p>
+        <div className="lx-kpi">
+          <div className="lx-kpi-label">Blocked by case</div>
+          <div className="lx-kpi-value">{data.summary.blockedByCase}</div>
+          <div className="lx-kpi-meta">Awaiting provider to resolve the case</div>
         </div>
       </div>
 
       {/* Filters */}
       <div className="flex flex-col sm:flex-row gap-3 mb-5">
         <div className="relative flex-1 max-w-sm">
-          <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-surface-400" />
+          <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-surface-400 pointer-events-none" />
           <input
             type="text"
             placeholder="Search provider, client, case, or txn ID…"
             value={search}
             onChange={e => setSearch(e.target.value)}
-            className="w-full pl-11 pr-4 py-2.5 bg-white border border-surface-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500/30 text-sm font-sans"
+            className="lx-input pl-9"
           />
         </div>
         <div className="flex gap-2 flex-wrap">
           {[
-            { key: 'all',        label: 'All',         count: data.transactions.length },
-            { key: 'releasable', label: 'Releasable',  count: data.summary.releasable },
-            { key: 'blocked',    label: 'Blocked',     count: data.summary.blockedByCase },
+            { key: 'all',        label: 'All',        count: data.transactions.length },
+            { key: 'releasable', label: 'Releasable', count: data.summary.releasable },
+            { key: 'blocked',    label: 'Blocked',    count: data.summary.blockedByCase },
           ].map(f => (
             <button
               key={f.key}
               onClick={() => setFilter(f.key)}
-              className={`flex items-center gap-1.5 px-4 py-2 rounded-full font-sans text-xs uppercase tracking-widest font-bold border transition-colors cursor-pointer ${
-                filter === f.key
-                  ? 'bg-primary-800 text-white border-primary-800'
-                  : 'bg-white text-surface-600 border-surface-200 hover:bg-surface-50'
-              }`}
+              className={`lx-tab ${filter === f.key ? 'active' : ''}`}
             >
               {f.label}
-              <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${filter === f.key ? 'bg-white/20' : 'bg-surface-100 text-surface-500'}`}>
-                {f.count}
-              </span>
+              <span className="lx-tab-count">{f.count}</span>
             </button>
           ))}
         </div>
       </div>
 
-      {/* Table */}
-      <div className="bg-white rounded-xl border border-surface-200 shadow-sm overflow-hidden">
+      {/* Bordered card table — Variation A */}
+      <div className="lx-card" style={{ overflow: 'hidden' }}>
         <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse">
+          <table className="lx-table tabular">
             <thead>
-              <tr className="bg-surface-50 border-b border-surface-200">
-                <th className="font-sans text-xs uppercase tracking-widest font-bold text-surface-500 p-4">Transaction</th>
-                <th className="font-sans text-xs uppercase tracking-widest font-bold text-surface-500 p-4">Provider</th>
-                <th className="font-sans text-xs uppercase tracking-widest font-bold text-surface-500 p-4">Client &amp; Case</th>
-                <th className="font-sans text-xs uppercase tracking-widest font-bold text-surface-500 p-4">Consult Date</th>
-                <th className="font-sans text-xs uppercase tracking-widest font-bold text-surface-500 p-4">Case Status</th>
-                <th className="font-sans text-xs uppercase tracking-widest font-bold text-surface-500 p-4 text-right">Amount</th>
-                <th className="font-sans text-xs uppercase tracking-widest font-bold text-surface-500 p-4 text-center">Action</th>
+              <tr>
+                <th>Transaction</th>
+                <th>Provider</th>
+                <th>Client &amp; Case</th>
+                <th>Consult date</th>
+                <th>Case status</th>
+                <th className="num">Amount</th>
+                <th style={{ textAlign: 'center' }}>Action</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-surface-100">
+            <tbody>
               {filtered.length === 0 ? (
                 <tr>
-                  <td colSpan="7" className="p-12 text-center">
-                    <Lock size={32} className="mx-auto text-surface-300 mb-2" />
-                    <p className="text-surface-700 font-semibold">No escrow transactions</p>
-                    <p className="text-sm text-surface-500 mt-1">
+                  <td colSpan="7" className="!p-12 text-center">
+                    <Lock size={28} className="mx-auto text-surface-300 mb-2" />
+                    <p className="strong" style={{ fontSize: 14 }}>No escrow transactions</p>
+                    <p className="body-sm muted mt-1">
                       {search || filter !== 'all'
                         ? 'Adjust your filters to see other transactions.'
                         : 'Funds held in escrow will appear here when providers complete consultations.'}
@@ -208,51 +185,56 @@ export default function AdminEscrow() {
               ) : (
                 filtered.map(t => {
                   const tid = t._id || t.id;
-                  const statusCls = CASE_STATUS_STYLE[t.case_status] || 'bg-surface-100 text-surface-600';
+                  const caseStatus = t.case_status || 'unknown';
+                  const caseBadgeCls =
+                    ['resolved', 'closed'].includes(caseStatus) ? 'lx-badge-success' :
+                    ['cancelled', 'declined'].includes(caseStatus) ? 'lx-badge-danger' :
+                    'lx-badge-info';
                   return (
-                    <tr key={tid} className="hover:bg-surface-50 transition-colors">
-                      <td className="p-4">
-                        <p className="font-mono text-xs text-surface-500">{t.transaction_id}</p>
-                        <p className="text-[11px] text-surface-400 mt-0.5">{t.date}</p>
+                    <tr key={tid}>
+                      <td>
+                        <div className="flex flex-col gap-0.5">
+                          <span className="mono" style={{ fontSize: 12 }}>{t.transaction_id}</span>
+                          <span className="body-xs muted">{t.date}</span>
+                        </div>
                       </td>
-                      <td className="p-4">
-                        <p className="font-semibold text-primary-900">{t.provider_name}</p>
-                        <p className="text-xs text-surface-500">{t.type}</p>
+                      <td>
+                        <p className="strong">{t.provider_name}</p>
+                        <p className="body-xs muted">{t.type}</p>
                       </td>
-                      <td className="p-4">
-                        <p className="font-medium text-surface-800">{t.client_name}</p>
+                      <td>
+                        <p className="strong">{t.client_name}</p>
                         {t.petition_code && (
-                          <p className="text-[11px] font-mono text-surface-400 mt-0.5">{t.petition_code}</p>
+                          <p className="mono body-xs" style={{ color: 'var(--color-surface-500)' }}>{t.petition_code}</p>
                         )}
                       </td>
-                      <td className="p-4 text-sm text-surface-600 whitespace-nowrap">{t.consultation_date || '—'}</td>
-                      <td className="p-4">
-                        <span className={`text-[10px] font-bold uppercase tracking-widest px-2 py-1 rounded ${statusCls}`}>
-                          {(t.case_status || 'unknown').replace(/-/g, ' ')}
+                      <td className="body-sm muted" style={{ whiteSpace: 'nowrap' }}>{t.consultation_date || '—'}</td>
+                      <td>
+                        <span className={`lx-badge ${caseBadgeCls}`}>
+                          <span className="lx-badge-dot" style={{ background: ['resolved', 'closed'].includes(caseStatus) ? 'var(--success-600)' : ['cancelled', 'declined'].includes(caseStatus) ? 'var(--danger-600)' : 'var(--info-600)' }} />
+                          {caseStatus.replace(/-/g, ' ')}
                         </span>
                       </td>
-                      <td className="p-4 text-right whitespace-nowrap">
-                        <span className="font-heading text-lg font-bold text-primary-900 flex items-center justify-end">
-                          {formatRupees(t.amount, { emptyDash: false })}
-                        </span>
-                      </td>
-                      <td className="p-4 text-center">
+                      <td className="num strong">{formatRupees(t.amount, { emptyDash: false })}</td>
+                      <td style={{ textAlign: 'center' }}>
                         {t.releasable ? (
                           <button
                             onClick={() => handleRelease(t)}
                             disabled={releasingId === tid}
-                            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-green-600 text-white text-xs font-sans font-bold hover:bg-green-700 disabled:opacity-50 transition-colors cursor-pointer uppercase tracking-wider"
+                            className="lx-btn lx-btn-sm"
+                            style={{ background: 'var(--success-600)', color: 'white' }}
                           >
                             {releasingId === tid
                               ? <span className="w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                              : <><ShieldCheck size={13} /> Release</>}
+                              : <><ShieldCheck size={12} /> Release</>}
                           </button>
                         ) : (
                           <span
                             title="Provider must resolve the case before funds can be released"
-                            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-surface-100 text-surface-500 text-xs font-bold uppercase tracking-wider cursor-not-allowed"
+                            className="lx-btn lx-btn-sm lx-btn-ghost"
+                            style={{ cursor: 'not-allowed', opacity: 0.6 }}
                           >
-                            <Lock size={13} /> Locked
+                            <Lock size={12} /> Locked
                           </span>
                         )}
                       </td>
@@ -265,8 +247,8 @@ export default function AdminEscrow() {
         </div>
       </div>
 
-      <p className="text-xs text-surface-500 mt-4 max-w-2xl">
-        <AlertCircle size={12} className="inline mr-1 align-text-bottom" />
+      <p className="body-xs muted mt-4 max-w-2xl">
+        <AlertCircle size={11} className="inline mr-1 align-text-bottom" />
         Funds are only releasable once the linked case is marked <strong>resolved</strong> or <strong>closed</strong> by the provider.
         This protects both citizens and providers — disputes can be raised before settlement.
       </p>

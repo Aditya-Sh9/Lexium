@@ -10,7 +10,7 @@ export default function MainLayout() {
       {/* Make sure content is above background */}
       <div className="relative z-10 flex flex-col min-h-screen">
         <Navbar />
-        <main className="flex-1 pt-20">
+        <main className="flex-1 pt-[60px]">
           <Outlet />
         </main>
         <Footer />

@@ -61,66 +61,67 @@ export default function ProviderProfile() {
 
   return (
     <div className="max-w-4xl mx-auto px-4 sm:px-6 py-8">
-      <Link to="/providers" className="inline-flex items-center gap-1.5 text-sm text-surface-500 hover:text-primary-600 mb-6 transition-colors">
-        <ArrowLeft size={16} /> Back to providers
+      <Link to="/providers" className="inline-flex items-center gap-1.5 body-sm muted hover:text-primary-700 mb-5 transition-colors">
+        <ArrowLeft size={14} /> Back to providers
       </Link>
 
-      {/* Profile header */}
-      <div className="bg-white rounded-2xl border border-surface-200 overflow-hidden">
-        <div className="h-2 bg-gradient-to-r from-primary-600 to-accent-300" />
-        <div className="p-6 sm:p-8">
-          <div className="flex flex-col sm:flex-row gap-6">
-            <div className="w-24 h-24 rounded-full bg-primary-700 text-white flex items-center justify-center font-heading font-bold text-2xl shrink-0 mx-auto sm:mx-0">
-              {initials || getInitials(name)}
-            </div>
+      {/* Detail-dense hero — Variation A */}
+      <div className="lx-card">
+        <div className="p-6 sm:p-7 grid gap-5" style={{ gridTemplateColumns: 'auto 1fr auto', alignItems: 'flex-start' }}>
+          <div className="lx-avatar lx-avatar-xl lx-avatar-tone-2">
+            {initials || getInitials(name)}
+          </div>
 
-            <div className="flex-1 text-center sm:text-left">
-              <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2 mb-2">
-                <h1 className="text-2xl font-heading font-bold text-surface-900">{name}</h1>
-                {badges?.map((b) => <Badge key={b} variant={b} />)}
-              </div>
-              <p className="text-surface-600 font-medium mb-1">{specialization}</p>
-              <div className="flex flex-wrap items-center justify-center sm:justify-start gap-4 text-sm text-surface-500 mb-3">
-                <span className="flex items-center gap-1"><MapPin size={14} /> {location}</span>
-                <span className="flex items-center gap-1"><Clock size={14} /> {experience} yrs experience</span>
-                <span className="text-primary-600 font-medium">{displayServiceType}</span>
-              </div>
-              <div className="flex items-center justify-center sm:justify-start gap-3">
-                <RatingStars rating={rating} size={18} showValue />
-                <span className="text-sm text-surface-400">({displayReviewCount} reviews)</span>
-              </div>
+          <div className="flex flex-col gap-2 min-w-0">
+            <div className="flex flex-wrap items-center gap-2">
+              <h1 className="lx-h2" style={{ margin: 0 }}>{name}</h1>
+              {badges?.map((b) => <Badge key={b} variant={b} />)}
             </div>
-
-            {/* CTA */}
-            <div className="shrink-0 text-center sm:text-right">
-              <p className="text-sm text-surface-500 mb-1">Starting from</p>
-              <p className="text-xl font-bold text-surface-900 mb-3">{formatPriceRange(displayPriceRange, { emptyDash: true })}</p>
-              <Link to={`/book/${provider._id || id}`} className="w-full sm:w-auto flex items-center justify-center gap-2 px-6 py-3 bg-primary-700 text-white font-semibold rounded-xl hover:bg-primary-800 active:scale-[0.98] transition-all cursor-pointer">
-                <FileText size={18} /> File a Case
-              </Link>
+            <span className="body" style={{ color: 'var(--color-surface-700)' }}>{specialization}</span>
+            <div className="flex flex-wrap items-center gap-4 body-sm mt-0.5">
+              <span className="inline-flex items-center gap-1"><MapPin size={12} /> {location}</span>
+              <span className="inline-flex items-center gap-1"><Clock size={12} /> {experience} yrs</span>
+              <span className="inline-flex items-center gap-1"><Briefcase size={12} /> {displayServiceType}</span>
+            </div>
+            <div className="flex items-center gap-2 mt-1">
+              <RatingStars rating={rating} size={13} showValue={false} />
+              <span className="tabular strong" style={{ fontSize: 13 }}>{Number(rating || 0).toFixed(1)}</span>
+              <span className="muted body-sm">({displayReviewCount} reviews)</span>
             </div>
           </div>
 
-          <p className="mt-6 text-surface-600 leading-relaxed border-t border-surface-100 pt-6">{bio}</p>
-
-          {languages && (
-            <div className="mt-4 flex flex-wrap gap-2">
-              {languages.map((l) => (
-                <span key={l} className="px-3 py-1 text-xs font-medium bg-surface-100 text-surface-600 rounded-full">{l}</span>
-              ))}
-            </div>
-          )}
+          <div className="flex flex-col items-end gap-1.5 shrink-0 text-right">
+            <span className="label">Starting from</span>
+            <span className="tabular" style={{ fontSize: 18, fontFamily: 'var(--font-heading)', color: 'var(--color-primary-950, #0a1220)', letterSpacing: '-0.01em', fontWeight: 500 }}>
+              {formatPriceRange(displayPriceRange, { emptyDash: true })}
+            </span>
+            <Link to={`/book/${provider._id || id}`} className="lx-btn lx-btn-primary lx-btn-sm mt-1">
+              <FileText size={12} /> File a Case
+            </Link>
+          </div>
         </div>
+
+        {bio && (
+          <div className="px-6 sm:px-7 pb-6 sm:pb-7">
+            <p className="body" style={{ borderTop: '1px solid var(--hairline)', paddingTop: 16 }}>{bio}</p>
+            {languages && (
+              <div className="mt-3 flex flex-wrap gap-1.5">
+                {languages.map((l) => (
+                  <span key={l} className="lx-badge lx-badge-neutral">{l}</span>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Tabs */}
-      <div className="mt-8 border-b border-surface-200 flex gap-0 overflow-x-auto">
+      <div className="mt-7 flex gap-0 overflow-x-auto" style={{ borderBottom: '1px solid var(--hairline)' }}>
         {tabs.map((tab) => {
           const Icon = tab.icon;
           return (
-            <button key={tab.id} onClick={() => setActiveTab(tab.id)}
-              className={`flex items-center gap-1.5 px-5 py-3 text-sm font-medium border-b-2 transition-colors whitespace-nowrap cursor-pointer ${activeTab === tab.id ? 'border-primary-600 text-primary-600' : 'border-transparent text-surface-500 hover:text-surface-700'}`}>
-              <Icon size={16} /> {tab.label}
+            <button key={tab.id} onClick={() => setActiveTab(tab.id)} className={`lx-subtab ${activeTab === tab.id ? 'active' : ''}`}>
+              <Icon size={13} /> {tab.label}
             </button>
           );
         })}

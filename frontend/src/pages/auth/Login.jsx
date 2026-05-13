@@ -1,13 +1,16 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router';
-import { Mail, Lock, Eye, EyeOff, Scale, Shield, User, Briefcase } from 'lucide-react';
+import {
+  Mail, Lock, Eye, EyeOff, Scale, Shield, User, Briefcase,
+  ArrowRight, CheckCircle2, ShieldCheck,
+} from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { themeToast } from '../../utils/alert';
 
 const ROLE_TABS = [
-  { id: 'citizen', label: 'Citizen', icon: User, desc: 'Access legal services' },
-  { id: 'provider', label: 'Legal Provider', icon: Briefcase, desc: 'Manage your practice' },
-  { id: 'admin', label: 'Admin', icon: Shield, desc: 'Platform management' },
+  { id: 'citizen',  label: 'Citizen',        icon: User,      hint: 'Access legal services, file cases, and track consultations.' },
+  { id: 'provider', label: 'Legal Provider', icon: Briefcase, hint: 'Manage your practice, docket, and earnings.' },
+  { id: 'admin',    label: 'Admin',          icon: Shield,    hint: 'Platform administration portal.' },
 ];
 
 export default function Login() {
@@ -16,6 +19,7 @@ export default function Login() {
   const [activeRole, setActiveRole] = useState('citizen');
   const [form, setForm] = useState({ email: '', password: '' });
   const [showPw, setShowPw] = useState(false);
+  const [keepSignedIn, setKeepSignedIn] = useState(true);
   const [loading, setLoading] = useState(false);
 
   const handleChange = (e) => {
@@ -30,14 +34,12 @@ export default function Login() {
       setLoading(true);
 
       if (activeRole === 'admin') {
-        // Admin — direct MongoDB login
         await adminLogin(form.email, form.password);
         themeToast.success('Logged in as Admin');
         navigate('/admin/dashboard');
         return;
       }
 
-      // Citizen / Provider — Firebase login
       const result = await login(form.email, form.password);
       const user = result.user;
 
@@ -71,114 +73,251 @@ export default function Login() {
     }
   };
 
+  const activeTab = ROLE_TABS.find(t => t.id === activeRole);
+
   return (
-    <div className="min-h-[calc(100vh-5rem)] flex items-center justify-center px-4 py-16">
-      <div className="w-full max-w-[520px]">
-        {/* Header */}
-        <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-primary-800 mb-4 shadow-lg">
-            <Scale size={26} className="text-white" />
+    <div className="min-h-screen grid lg:grid-cols-2 bg-[var(--color-surface-50)]">
+      {/* ── Brand panel (left) ─────────────────────────────────── */}
+      <aside
+        className="relative hidden lg:flex flex-col justify-between overflow-hidden px-14 py-14 text-white"
+        style={{ background: 'linear-gradient(180deg, #0f1b2d 0%, #0a1220 100%)' }}
+      >
+        {/* Decorative concentric ring */}
+        <div
+          className="absolute pointer-events-none"
+          style={{
+            right: -160, top: 80,
+            width: 520, height: 520,
+            borderRadius: '50%',
+            border: '1px solid rgba(255,255,255,0.05)',
+          }}
+        />
+        <div
+          className="absolute pointer-events-none"
+          style={{
+            right: -100, top: 140,
+            width: 400, height: 400,
+            borderRadius: '50%',
+            border: '1px solid rgba(255,255,255,0.04)',
+          }}
+        />
+        <div
+          className="absolute inset-0 opacity-[0.05] pointer-events-none"
+          style={{
+            backgroundImage: 'radial-gradient(circle at 2px 2px, #ffffff 1px, transparent 0)',
+            backgroundSize: '32px 32px',
+          }}
+        />
+
+        {/* Brand (top) */}
+        <Link to="/" className="relative inline-flex items-center gap-3 w-max group">
+          <div
+            className="w-10 h-10 rounded-lg flex items-center justify-center transition-transform group-hover:scale-105"
+            style={{ background: 'rgba(232,208,153,0.10)', boxShadow: 'inset 0 0 0 1px rgba(232,208,153,0.18)' }}
+          >
+            <Scale size={18} className="text-[var(--brass-light)]" />
           </div>
-          <h1 className="font-heading text-3xl text-surface-900 mb-1">Enter the Chambers</h1>
-          <p className="font-sans text-surface-500 text-sm">Sign in to your account to continue</p>
+          <span className="font-heading text-[20px]" style={{ letterSpacing: '0.01em', fontWeight: 500 }}>
+            Lexium
+          </span>
+        </Link>
+
+        {/* Value prop (middle) */}
+        <div className="relative max-w-[520px]">
+          <span className="eyebrow" style={{ color: 'var(--brass-light)', opacity: 0.9 }}>The Lexium Registry</span>
+          <h2
+            className="font-heading mt-4"
+            style={{
+              fontSize: 52,
+              lineHeight: 1.06,
+              letterSpacing: '-0.02em',
+              fontWeight: 500,
+            }}
+          >
+            Where verified<br/>counsel meets<br/>considered clients.
+          </h2>
+
+          <div
+            className="mt-6 mb-7"
+            style={{ width: 56, height: 1, background: 'linear-gradient(to right, var(--brass), transparent)' }}
+          />
+
+          <p className="text-[15px] leading-relaxed opacity-75 max-w-[460px]">
+            File cases, track active legal matters, manage consultations, and settle escrow — all within a single, calm workspace.
+          </p>
+
+          <ul className="mt-10 flex flex-col gap-3.5">
+            {[
+              'Verified, bar-registered providers',
+              'Transparent escrow-backed payments',
+              'Full case timeline and audit trail',
+            ].map(line => (
+              <li key={line} className="flex items-center gap-3 text-[14px] opacity-85">
+                <CheckCircle2 size={14} className="text-[var(--brass-light)] shrink-0" />
+                <span>{line}</span>
+              </li>
+            ))}
+          </ul>
         </div>
 
-        {/* Role Tabs */}
-        <div className="flex rounded-xl bg-surface-100 p-1 mb-6 border border-surface-200 gap-1">
-          {ROLE_TABS.map((tab) => {
-            const Icon = tab.icon;
-            return (
-              <button
-                key={tab.id}
-                type="button"
-                onClick={() => { setActiveRole(tab.id); }}
-                className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-lg font-sans text-xs uppercase tracking-widest font-bold transition-all cursor-pointer ${
-                  activeRole === tab.id
-                    ? 'bg-white text-primary-800 shadow-sm border border-surface-200'
-                    : 'text-surface-500 hover:text-surface-700'
-                }`}
-              >
-                <Icon size={14} />
-                {tab.label}
-              </button>
-            );
-          })}
+        {/* Footer (bottom) */}
+        <div className="relative flex items-center justify-between text-[12px] opacity-55">
+          <span>© Lexium · Digital Chambers of Justice</span>
+          <span className="inline-flex items-center gap-1.5">
+            <ShieldCheck size={12} /> 256-bit encrypted
+          </span>
         </div>
+      </aside>
 
-        {/* Form Card */}
-        <div className="bg-white/90 backdrop-blur-[20px] rounded-2xl p-8 border border-white/60 shadow-[0_30px_60px_-15px_rgba(15,27,45,0.08)]">
-          {/* Role-specific hint */}
-          <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-surface-50 border border-surface-200 mb-6 text-sm text-surface-600">
-            {activeRole === 'admin' && <Shield size={16} className="text-primary-800" />}
-            {activeRole === 'citizen' && <User size={16} className="text-primary-800" />}
-            {activeRole === 'provider' && <Briefcase size={16} className="text-primary-800" />}
-            <span>
-              {activeRole === 'admin' && 'Admin portal — direct access'}
-              {activeRole === 'citizen' && 'Access legal services and book appointments'}
-              {activeRole === 'provider' && 'Manage your practice and docket'}
+      {/* ── Form panel (right) ─────────────────────────────────── */}
+      <section className="relative flex flex-col px-6 py-8 sm:px-10 lg:px-14 lg:py-10">
+        {/* Top-right action */}
+        <div className="flex justify-between items-center mb-10 lg:mb-6">
+          {/* Mobile brand */}
+          <Link to="/" className="lg:hidden flex items-center gap-2.5">
+            <div className="w-9 h-9 rounded-lg bg-primary-900 flex items-center justify-center" style={{ boxShadow: 'inset 0 0 0 1px rgba(255,255,255,0.06)' }}>
+              <Scale size={16} className="text-[var(--brass-light)]" />
+            </div>
+            <span className="font-heading text-[20px] text-primary-900" style={{ letterSpacing: '0.01em', fontWeight: 500 }}>
+              Lexium
             </span>
-          </div>
+          </Link>
 
-          <form onSubmit={handleSubmit} className="space-y-5">
-            <div>
-              <label htmlFor="login-email" className="block font-sans text-xs uppercase tracking-widest font-bold text-surface-500 mb-2">Email</label>
-              <div className="relative">
-                <Mail size={18} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-surface-400" />
-                <input
-                  id="login-email"
-                  name="email"
-                  type="email"
-                  value={form.email}
-                  onChange={handleChange}
-                  placeholder={activeRole === 'admin' ? 'admin@gmail.com' : 'you@example.com'}
-                  className="w-full pl-11 pr-4 py-3 bg-surface-50 border border-surface-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500/30 focus:border-primary-700 transition-all font-sans"
-                />
-              </div>
-            </div>
-
-            <div>
-              <label htmlFor="login-pw" className="block font-sans text-xs uppercase tracking-widest font-bold text-surface-500 mb-2">Password</label>
-              <div className="relative">
-                <Lock size={18} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-surface-400" />
-                <input
-                  id="login-pw"
-                  name="password"
-                  type={showPw ? 'text' : 'password'}
-                  value={form.password}
-                  onChange={handleChange}
-                  placeholder="••••••••"
-                  className="w-full pl-11 pr-11 py-3 bg-surface-50 border border-surface-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500/30 focus:border-primary-700 transition-all font-sans"
-                />
-                <button type="button" onClick={() => setShowPw(!showPw)} className="absolute right-3.5 top-1/2 -translate-y-1/2 text-surface-400 hover:text-surface-600 cursor-pointer" tabIndex={-1}>
-                  {showPw ? <EyeOff size={18} /> : <Eye size={18} />}
-                </button>
-              </div>
-            </div>
-
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full flex items-center justify-center gap-2 py-3.5 bg-primary-800 text-white font-sans text-sm uppercase tracking-widest font-bold rounded-xl hover:bg-primary-900 disabled:opacity-60 active:scale-[0.98] transition-all cursor-pointer border border-accent-300/50"
-            >
-              {loading ? (
-                <span className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-              ) : (
-                `Sign In as ${ROLE_TABS.find(t => t.id === activeRole)?.label}`
-              )}
-            </button>
-          </form>
-        </div>
-
-        {/* Footer links */}
-        {activeRole !== 'admin' && (
-          <p className="text-center text-sm text-surface-500 mt-6 font-sans">
-            Don't have an account?{' '}
-            <Link to="/register" className="font-bold text-primary-800 hover:underline">
-              Create one
+          <p className="hidden lg:block body-sm muted ml-auto">
+            New to Lexium?{' '}
+            <Link to="/register" className="font-medium text-[var(--color-primary-900)] hover:underline">
+              Create an account
             </Link>
           </p>
-        )}
-      </div>
+        </div>
+
+        {/* Form container — vertically centered in available space */}
+        <div className="flex-1 flex items-center justify-center">
+          <div className="w-full max-w-[460px]">
+            <div className="mb-7">
+              <h1 className="lx-h1" style={{ fontSize: 32, lineHeight: 1.15 }}>Welcome back</h1>
+              <p className="body muted mt-1.5">Sign in to your account to continue.</p>
+            </div>
+
+            {/* CONTINUE AS */}
+            <div className="mb-3">
+              <span className="label">Continue as</span>
+            </div>
+            <div className="flex gap-2 mb-3 flex-wrap">
+              {ROLE_TABS.map((tab) => {
+                const Icon = tab.icon;
+                return (
+                  <button
+                    key={tab.id}
+                    type="button"
+                    onClick={() => setActiveRole(tab.id)}
+                    className={`lx-tab ${activeRole === tab.id ? 'active' : ''}`}
+                  >
+                    <Icon size={13} />
+                    {tab.label}
+                  </button>
+                );
+              })}
+            </div>
+            <p className="body-sm muted mb-6">{activeTab.hint}</p>
+
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div>
+                <label htmlFor="login-email" className="label-strong label block mb-1.5">Email</label>
+                <div className="relative">
+                  <Mail size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-surface-400 pointer-events-none" />
+                  <input
+                    id="login-email"
+                    name="email"
+                    type="email"
+                    value={form.email}
+                    onChange={handleChange}
+                    placeholder={activeRole === 'admin' ? 'admin@gmail.com' : 'you@example.com'}
+                    className="lx-input pl-9"
+                    autoComplete="email"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <div className="flex items-center justify-between mb-1.5">
+                  <label htmlFor="login-pw" className="label-strong label">Password</label>
+                  <button
+                    type="button"
+                    onClick={() => themeToast('Password recovery coming soon.')}
+                    className="body-sm text-[var(--color-primary-700)] hover:underline cursor-pointer"
+                  >
+                    Forgot password?
+                  </button>
+                </div>
+                <div className="relative">
+                  <Lock size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-surface-400 pointer-events-none" />
+                  <input
+                    id="login-pw"
+                    name="password"
+                    type={showPw ? 'text' : 'password'}
+                    value={form.password}
+                    onChange={handleChange}
+                    placeholder="••••••••"
+                    className="lx-input pl-9 pr-10"
+                    autoComplete="current-password"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPw(!showPw)}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 w-7 h-7 inline-flex items-center justify-center rounded text-surface-500 hover:text-surface-800 hover:bg-surface-100 cursor-pointer"
+                    tabIndex={-1}
+                    aria-label={showPw ? 'Hide password' : 'Show password'}
+                  >
+                    {showPw ? <EyeOff size={14} /> : <Eye size={14} />}
+                  </button>
+                </div>
+              </div>
+
+              {/* Keep me signed in */}
+              <label className="flex items-center gap-2.5 cursor-pointer select-none pt-1">
+                <input
+                  type="checkbox"
+                  checked={keepSignedIn}
+                  onChange={(e) => setKeepSignedIn(e.target.checked)}
+                  className="w-4 h-4 rounded border-[var(--hairline-strong)] text-[var(--color-primary-900)] focus:ring-[var(--color-primary-400)] cursor-pointer"
+                />
+                <span className="body-sm" style={{ color: 'var(--color-surface-700)' }}>
+                  Keep me signed in on this device
+                </span>
+              </label>
+
+              <button
+                type="submit"
+                disabled={loading}
+                className="lx-btn lx-btn-primary lx-btn-lg w-full mt-2"
+              >
+                {loading ? (
+                  <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                ) : (
+                  <>Sign in as {activeTab.label} <ArrowRight size={14} /></>
+                )}
+              </button>
+            </form>
+
+            {/* Mobile-only "create account" link */}
+            <p className="lg:hidden text-center body-sm muted mt-6">
+              New to Lexium?{' '}
+              <Link to="/register" className="font-medium text-[var(--color-primary-900)] hover:underline">
+                Create an account
+              </Link>
+            </p>
+          </div>
+        </div>
+
+        {/* Footer */}
+        <p className="text-center body-xs muted mt-8">
+          By continuing you accept our{' '}
+          <Link to="/terms" className="text-[var(--color-primary-700)] hover:underline">Terms</Link>{' '}
+          and acknowledge our{' '}
+          <Link to="/privacy" className="text-[var(--color-primary-700)] hover:underline">Privacy Policy</Link>.
+        </p>
+      </section>
     </div>
   );
 }

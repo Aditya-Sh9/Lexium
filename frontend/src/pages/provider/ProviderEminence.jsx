@@ -37,10 +37,10 @@ export default function ProviderEminence() {
   }
 
   return (
-    <div className="max-w-[1920px] mx-auto p-6 md:p-12 font-sans bg-transparent">
-      <header className="mb-12 border-b border-surface-200 pb-6">
-        <h1 className="font-heading text-4xl text-primary-900">Eminence & Reputation</h1>
-        <p className="font-sans text-lg text-surface-500 mt-2">Your standing within the Sovereign Digital Framework.</p>
+    <div className="max-w-[1440px] mx-auto px-6 md:px-8 pt-6 pb-12 font-sans bg-transparent">
+      <header className="mb-8 pb-5" style={{ borderBottom: '1px solid var(--hairline)' }}>
+        <h1 className="lx-h1">Eminence &amp; Reputation</h1>
+        <p className="body mt-1">Your standing within the Lexium registry — badges, tier, and reputation indicators.</p>
       </header>
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
