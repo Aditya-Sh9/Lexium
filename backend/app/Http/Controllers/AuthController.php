@@ -47,6 +47,23 @@ class AuthController extends Controller
 
         // If this is a provider, create the provider profile with onboarding data
         if ($role === 'provider') {
+            $services = $request->input('services', []);
+            $consultationFee = (int) $request->input('consultation_fee', 0);
+
+            // Every provider must offer at least General Consultation — auto-inject if missing.
+            $hasGeneral = collect($services)->contains(function ($s) {
+                return str_contains(strtolower($s['name'] ?? ''), 'general consult');
+            });
+            if (!$hasGeneral) {
+                // Default price: lowest existing service price > consultation_fee > 1000
+                $lowest = collect($services)
+                    ->map(fn ($s) => (int) preg_replace('/[^\d]/', '', (string) ($s['price'] ?? '')))
+                    ->filter(fn ($n) => $n > 0)
+                    ->min();
+                $price = $lowest ?: ($consultationFee ?: 1000);
+                $services[] = ['name' => 'General Consultation', 'price' => (string) $price, 'duration' => '30 min'];
+            }
+
             Provider::create([
                 'user_id'                 => (string) $user->_id,
                 'name'                    => $name,
@@ -59,11 +76,11 @@ class AuthController extends Controller
                 'experience'              => $request->input('experience', '0'),
                 'bio'                     => $request->input('bio', ''),
                 'price_range'             => $request->input('price_range', ''),
-                'consultation_fee'        => $request->input('consultation_fee', 0),
+                'consultation_fee'        => $consultationFee,
                 'languages'               => $request->input('languages', []),
                 'availability'            => $request->input('availability', ''),
                 'qualifications'          => $request->input('qualifications', []),
-                'services'                => $request->input('services', []),
+                'services'                => $services,
                 'rating'                  => 0,
                 'rating_count'            => 0,
                 'review_count'            => 0,

@@ -14,11 +14,18 @@ class Appointment extends Model
         'provider_id',
         'provider_name',
         'citizen_name',
-        'type',              // Initial Consultation, Contract Review, etc.
+        'petition_id',       // Link back to the case this consultation belongs to (string MongoDB ObjectId)
+        'petition_code',     // Human-readable petition code (e.g. PET-1029) for display
+        'type',              // Initial Consultation, Follow-up, etc.
         'date',
         'time',
-        'status',            // pending, confirmed, completed, cancelled
+        'status',            // pending, confirmed, in-progress, completed, cancelled, declined
         'notes',
+        'reviewed',          // boolean — citizen has submitted a review for this appointment
+    ];
+
+    protected $casts = [
+        'reviewed' => 'boolean',
     ];
 
     public function citizen()

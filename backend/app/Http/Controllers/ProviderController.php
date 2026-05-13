@@ -50,25 +50,66 @@ class ProviderController extends Controller
 
         $pid = (string) $provider->_id;
 
-        $activeClients = Appointment::where('provider_id', $pid)
-            ->whereIn('status', ['confirmed', 'in-progress'])->count();
+        // "Active Clients" = distinct citizens with an open case OR an upcoming appointment
+        $citizenIdsFromCases = Petition::where('provider_id', $pid)
+            ->whereIn('status', ['under-review', 'in-progress', 'awaiting-documents', 'accepted'])
+            ->pluck('citizen_id')->toArray();
+        $citizenIdsFromAppts = Appointment::where('provider_id', $pid)
+            ->whereIn('status', ['confirmed', 'in-progress', 'pending'])
+            ->pluck('citizen_id')->toArray();
+        $activeClients = count(array_unique(array_merge($citizenIdsFromCases, $citizenIdsFromAppts)));
+
+        $openCases    = Petition::where('provider_id', $pid)
+            ->whereIn('status', ['under-review', 'in-progress', 'awaiting-documents', 'accepted'])->count();
+        $newRequests  = Petition::where('provider_id', $pid)->where('status', 'pending')->count();
 
         $todayDocket = Appointment::where('provider_id', $pid)
             ->whereIn('status', ['pending', 'confirmed', 'in-progress'])
             ->orderBy('date', 'asc')->limit(5)->get();
 
-        $pendingValue = Transaction::where('provider_id', $pid)->where('status', 'pending')->sum('amount');
-        $clearedValue = Transaction::where('provider_id', $pid)->where('status', 'cleared')->sum('amount');
-        $casesClosed  = Appointment::where('provider_id', $pid)->where('status', 'completed')->count();
+        $pendingValue  = Transaction::where('provider_id', $pid)->where('status', 'pending')->sum('amount');
+        $clearedValue  = Transaction::where('provider_id', $pid)->where('status', 'cleared')->sum('amount');
+        $casesClosed   = Petition::where('provider_id', $pid)->whereIn('status', ['resolved', 'closed'])->count();
+
+        // Count actually earned badges
+        $badgesEarned = 0;
+        if (($provider->rating ?? 0) >= 4.5) $badgesEarned++;
+        if ($casesClosed >= 10) $badgesEarned++;
+
+        // Leaderboard position
+        $allProviders = Provider::where('status', 'approved')
+            ->orderBy('rating', 'desc')
+            ->orderBy('review_count', 'desc')
+            ->get(['_id']);
+        $leaderboardPosition = null;
+        foreach ($allProviders as $idx => $p) {
+            if ((string) $p->_id === $pid) {
+                $leaderboardPosition = $idx + 1;
+                break;
+            }
+        }
+
+        // Recent reviews (last 3 from Provider.reviews array)
+        $reviews = is_array($provider->reviews) ? $provider->reviews : [];
+        $recentReviews = array_slice(array_reverse($reviews), 0, 3);
+
+        // Weekly appointments count
+        $weeklyApts = Appointment::where('provider_id', $pid)
+            ->where('date', '>=', now()->startOfWeek()->toDateString())
+            ->where('date', '<=', now()->endOfWeek()->toDateString())
+            ->count();
 
         return response()->json([
-            'standing'      => $provider->rating >= 4.5 ? 'Exemplary' : 'Good',
-            'activeClients' => $activeClients,
-            'weeklyApts'    => Appointment::where('provider_id', $pid)
-                ->where('date', '>=', now()->startOfWeek()->toDateString())->count(),
-            'badgesEarned'  => 0,
-            'todayDocket'   => $todayDocket,
-            'accruedValue'  => [
+            'standing'           => ($provider->rating ?? 0) >= 4.5 ? 'Exemplary' : 'Good',
+            'activeClients'      => $activeClients,
+            'openCases'          => $openCases,
+            'newRequests'        => $newRequests,
+            'weeklyApts'         => $weeklyApts,
+            'badgesEarned'       => $badgesEarned,
+            'leaderboardPosition'=> $leaderboardPosition,
+            'todayDocket'        => $todayDocket,
+            'recentReviews'      => $recentReviews,
+            'accruedValue'       => [
                 'pending'      => $pendingValue,
                 'cleared'      => $clearedValue,
                 'monthlyTotal' => $pendingValue + $clearedValue,
@@ -90,6 +131,9 @@ class ProviderController extends Controller
             'activeCases' => Appointment::where('provider_id', $pid)
                 ->whereIn('status', ['confirmed', 'in-progress', 'pending'])
                 ->orderBy('date', 'asc')->get(),
+            'activePetitions' => Petition::where('provider_id', $pid)
+                ->whereIn('status', ['under-review', 'in-progress', 'awaiting-documents', 'accepted'])
+                ->orderBy('updated_at', 'desc')->get(),
         ]);
     }
 
@@ -103,7 +147,7 @@ class ProviderController extends Controller
         return response()->json([
             'clearedValue'  => Transaction::where('provider_id', $pid)->where('status', 'cleared')->sum('amount'),
             'pendingEscrow' => Transaction::where('provider_id', $pid)->where('status', 'pending')->sum('amount'),
-            'transactions'  => Transaction::where('provider_id', $pid)->orderBy('created_at', 'desc')->limit(20)->get(),
+            'transactions'  => Transaction::where('provider_id', $pid)->orderBy('created_at', 'desc')->limit(50)->get(),
         ]);
     }
 
@@ -113,7 +157,9 @@ class ProviderController extends Controller
         if (!$provider) return response()->json(['error' => 'Provider profile not found'], 404);
 
         $pid = (string) $provider->_id;
-        $casesClosed = Appointment::where('provider_id', $pid)->where('status', 'completed')->count();
+        $casesClosed = Petition::where('provider_id', $pid)->whereIn('status', ['resolved', 'closed'])->count();
+        $reviewCount = $provider->review_count ?? 0;
+        $ratingAvg   = $provider->rating ?? 0;
 
         $tier = match (true) {
             $casesClosed >= 50 => 'Tier V',
@@ -123,17 +169,34 @@ class ProviderController extends Controller
             default            => 'Tier I',
         };
 
+        $badges = [
+            ['id' => 1, 'name' => 'Top Rated Advocate', 'icon' => 'star',   'earned' => $ratingAvg >= 4.5],
+            ['id' => 2, 'name' => 'Flawless Record',    'icon' => 'shield', 'earned' => $casesClosed >= 10],
+            ['id' => 3, 'name' => 'Pro Bono Champion',  'icon' => 'award',  'earned' => false],
+        ];
+
+        // Leaderboard position
+        $allProviders = Provider::where('status', 'approved')
+            ->orderBy('rating', 'desc')
+            ->orderBy('review_count', 'desc')
+            ->get(['_id']);
+        $leaderboardPosition = null;
+        foreach ($allProviders as $idx => $p) {
+            if ((string) $p->_id === $pid) {
+                $leaderboardPosition = $idx + 1;
+                break;
+            }
+        }
+
         return response()->json([
-            'tier'             => $tier,
-            'standing'         => $provider->rating >= 4.5 ? 'Exemplary' : 'Good',
-            'casesClosed'      => $casesClosed,
-            'proBonoCompleted' => 0,
-            'ratingAvg'        => $provider->rating,
-            'badges'           => [
-                ['id' => 1, 'name' => 'Top Rated Advocate', 'icon' => 'star',   'earned' => $provider->rating >= 4.5],
-                ['id' => 2, 'name' => 'Flawless Record',   'icon' => 'shield', 'earned' => $casesClosed >= 10],
-                ['id' => 3, 'name' => 'Pro Bono Champion',  'icon' => 'award',  'earned' => false],
-            ],
+            'tier'               => $tier,
+            'standing'           => $ratingAvg >= 4.5 ? 'Exemplary' : 'Good',
+            'casesClosed'        => $casesClosed,
+            'proBonoCompleted'   => 0,
+            'ratingAvg'          => $ratingAvg,
+            'reviewCount'        => $reviewCount,
+            'leaderboardPosition'=> $leaderboardPosition,
+            'badges'             => $badges,
         ]);
     }
 
@@ -158,6 +221,8 @@ class ProviderController extends Controller
         return response()->json(['message' => 'Profile updated successfully', 'provider' => $provider->fresh()]);
     }
 
+    // ── Petition Actions ─────────────────────────────────────────
+
     public function acceptPetition(Request $request, $id)
     {
         $provider = $this->resolveProvider($request);
@@ -166,23 +231,53 @@ class ProviderController extends Controller
         $petition = Petition::where('_id', $id)->where('provider_id', (string) $provider->_id)->first();
         if (!$petition) return response()->json(['error' => 'Petition not found'], 404);
 
-        $petition->update([
-            'status'    => 'accepted',
-            'next_step' => 'Awaiting scheduling confirmation.',
+        // Provider may optionally override scheduled date/time when accepting
+        $validated = $request->validate([
+            'scheduled_date' => 'nullable|string',
+            'scheduled_time' => 'nullable|string',
         ]);
 
-        Appointment::create([
+        // Resolve consultation date/time: provider-chosen > citizen-preferred > default (3 days out, 10am)
+        $consultDate = $validated['scheduled_date']
+            ?? $petition->preferred_date
+            ?? now()->addDays(3)->toDateString();
+        $consultTime = $validated['scheduled_time']
+            ?? $petition->preferred_time
+            ?? '10:00 AM';
+
+        $timeline = $petition->timeline ?? [];
+        $timeline[] = [
+            'action'    => 'accepted',
+            'note'      => "Case accepted by provider. Consultation scheduled for {$consultDate} at {$consultTime}.",
+            'timestamp' => now()->toISOString(),
+        ];
+
+        $petition->update([
+            'status'    => 'under-review',
+            'next_step' => "Provider has accepted your case. Your consultation is scheduled for {$consultDate} at {$consultTime}.",
+            'timeline'  => $timeline,
+        ]);
+
+        $appointment = Appointment::create([
             'citizen_id'    => $petition->citizen_id,
             'citizen_name'  => $petition->citizen_name,
             'provider_id'   => $petition->provider_id,
             'provider_name' => $petition->provider_name,
+            'petition_id'   => (string) $petition->_id,
+            'petition_code' => $petition->petition_id,
             'type'          => $petition->type,
-            'date'          => now()->addDays(3)->toDateString(),
-            'time'          => '10:00 AM',
+            'date'          => $consultDate,
+            'time'          => $consultTime,
             'status'        => 'confirmed',
+            'notes'         => 'Consultation linked to case ' . $petition->petition_id,
+            'reviewed'      => false,
         ]);
 
-        return response()->json(['message' => "Petition accepted"]);
+        return response()->json([
+            'message'     => 'Case accepted — consultation scheduled',
+            'petition'    => $petition->fresh(),
+            'appointment' => $appointment,
+        ]);
     }
 
     public function declinePetition(Request $request, $id)
@@ -193,13 +288,73 @@ class ProviderController extends Controller
         $petition = Petition::where('_id', $id)->where('provider_id', (string) $provider->_id)->first();
         if (!$petition) return response()->json(['error' => 'Petition not found'], 404);
 
+        $reason = $request->input('reason', 'The provider has declined this request.');
+
+        $timeline = $petition->timeline ?? [];
+        $timeline[] = [
+            'action'    => 'declined',
+            'note'      => $reason,
+            'timestamp' => now()->toISOString(),
+        ];
+
         $petition->update([
-            'status'    => 'declined',
-            'next_step' => 'The provider has declined this request.',
+            'status'         => 'declined',
+            'next_step'      => 'You may reach out to another practitioner.',
+            'provider_notes' => $reason,
+            'timeline'       => $timeline,
         ]);
 
-        return response()->json(['message' => "Petition declined"]);
+        return response()->json(['message' => 'Petition declined']);
     }
+
+    /**
+     * PUT /provider/petitions/{id}/status
+     * Update petition status and optionally add a provider note.
+     */
+    public function updatePetitionStatus(Request $request, $id)
+    {
+        $provider = $this->resolveProvider($request);
+        if (!$provider) return response()->json(['error' => 'Provider profile not found'], 404);
+
+        $petition = Petition::where('_id', $id)->where('provider_id', (string) $provider->_id)->first();
+        if (!$petition) return response()->json(['error' => 'Petition not found'], 404);
+
+        $validated = $request->validate([
+            'status' => 'required|in:under-review,in-progress,awaiting-documents,resolved,closed',
+            'note'   => 'nullable|string|max:500',
+        ]);
+
+        $nextStepMap = [
+            'under-review'        => 'Provider is reviewing your case details.',
+            'in-progress'         => 'Your case is actively being worked on.',
+            'awaiting-documents'  => 'Please submit the required documents to proceed.',
+            'resolved'            => 'Your case has been resolved. Please confirm closure.',
+            'closed'              => 'This case is now closed.',
+        ];
+
+        $timeline = $petition->timeline ?? [];
+        $timeline[] = [
+            'action'    => $validated['status'],
+            'note'      => $validated['note'] ?? $nextStepMap[$validated['status']],
+            'timestamp' => now()->toISOString(),
+        ];
+
+        $updates = [
+            'status'    => $validated['status'],
+            'next_step' => $nextStepMap[$validated['status']],
+            'timeline'  => $timeline,
+        ];
+
+        if (!empty($validated['note'])) {
+            $updates['provider_notes'] = $validated['note'];
+        }
+
+        $petition->update($updates);
+
+        return response()->json(['message' => 'Petition status updated', 'petition' => $petition->fresh()]);
+    }
+
+    // ── Appointment Actions ──────────────────────────────────────
 
     public function acceptAppointment(Request $request, $id)
     {
@@ -226,7 +381,8 @@ class ProviderController extends Controller
     }
 
     /**
-     * PUT /provider/appointments/{id}/complete — mark an appointment as completed.
+     * PUT /provider/appointments/{id}/complete
+     * Mark appointment complete and auto-create a transaction using provider's fee.
      */
     public function completeAppointment(Request $request, $id)
     {
@@ -241,18 +397,72 @@ class ProviderController extends Controller
 
         $appointment->update(['status' => 'completed']);
 
-        // Auto-create a cleared transaction
+        // Resolve transaction amount: linked petition's quoted_price > provider.consultation_fee > 0
+        $amount = null;
+        if (!empty($appointment->petition_id)) {
+            $linkedPetition = Petition::find($appointment->petition_id);
+            if ($linkedPetition && $linkedPetition->quoted_price) {
+                $amount = (float) $linkedPetition->quoted_price;
+            }
+        }
+        if ($amount === null) {
+            $amount = (float) ($provider->consultation_fee ?: 0);
+        }
+
         Transaction::create([
             'transaction_id' => 'TRX-' . rand(1000, 9999),
             'provider_id'    => (string) $provider->_id,
             'client_name'    => $appointment->citizen_name,
             'type'           => $appointment->type,
-            'amount'         => 2500,
+            'amount'         => $amount,
             'status'         => 'cleared',
             'date'           => now()->toDateString(),
         ]);
 
+        // Log the consultation event on related open cases — but do NOT auto-resolve them.
+        // The case remains active until the provider explicitly progresses it via updatePetitionStatus().
+        Petition::where('citizen_id', $appointment->citizen_id)
+            ->where('provider_id', (string) $provider->_id)
+            ->whereIn('status', ['under-review', 'in-progress', 'awaiting-documents', 'accepted'])
+            ->each(function ($petition) {
+                $timeline = $petition->timeline ?? [];
+                $timeline[] = [
+                    'action'    => 'consultation-completed',
+                    'note'      => 'Consultation session completed. Case remains active pending further legal work.',
+                    'timestamp' => now()->toISOString(),
+                ];
+                $updates = ['timeline' => $timeline];
+                // Nudge under-review → in-progress (work has actually begun), but don't resolve.
+                if ($petition->status === 'under-review') {
+                    $updates['status']    = 'in-progress';
+                    $updates['next_step'] = 'Provider is actively working on your case following the consultation.';
+                }
+                $petition->update($updates);
+            });
+
         return response()->json(['message' => 'Appointment marked as completed']);
+    }
+
+    // ── Transaction Actions ──────────────────────────────────────
+
+    /**
+     * DELETE /provider/transactions/{id}
+     * Remove a pending transaction (cleared transactions cannot be deleted).
+     */
+    public function deleteTransaction(Request $request, $id)
+    {
+        $provider = $this->resolveProvider($request);
+        if (!$provider) return response()->json(['error' => 'Provider profile not found'], 404);
+
+        $transaction = Transaction::where('_id', $id)
+            ->where('provider_id', (string) $provider->_id)
+            ->first();
+
+        if (!$transaction) return response()->json(['error' => 'Transaction not found'], 404);
+
+        $transaction->delete();
+
+        return response()->json(['message' => 'Transaction removed successfully']);
     }
 
     // ── Helper ───────────────────────────────────────────────────

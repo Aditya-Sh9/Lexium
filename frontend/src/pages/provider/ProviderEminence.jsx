@@ -37,7 +37,7 @@ export default function ProviderEminence() {
   }
 
   return (
-    <div className="max-w-[1920px] mx-auto p-6 md:p-12 font-sans bg-transparent min-h-screen">
+    <div className="max-w-[1920px] mx-auto p-6 md:p-12 font-sans bg-transparent">
       <header className="mb-12 border-b border-surface-200 pb-6">
         <h1 className="font-heading text-4xl text-primary-900">Eminence & Reputation</h1>
         <p className="font-sans text-lg text-surface-500 mt-2">Your standing within the Sovereign Digital Framework.</p>

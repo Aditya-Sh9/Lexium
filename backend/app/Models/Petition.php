@@ -15,10 +15,20 @@ class Petition extends Model
         'provider_id',
         'provider_name',
         'citizen_name',
-        'type',               // Initial Consultation, Document Verification, etc.
+        'type',               // Legal matter type (Consultation, Document Drafting, Representation, etc.)
         'details',
-        'status',             // pending, accepted, declined, completed
+        'urgency',            // normal | high | urgent
+        'preferred_date',     // Citizen-suggested consultation date (optional)
+        'preferred_time',     // Citizen-suggested consultation time (optional)
+        'quoted_price',       // Numeric price for this case (taken from the chosen service)
+        'status',             // pending | under-review | in-progress | awaiting-documents | resolved | closed | declined
         'next_step',
+        'provider_notes',     // Provider's latest note visible to citizen
+        'timeline',           // Array of {action, note, timestamp} for case history
+    ];
+
+    protected $casts = [
+        'timeline' => 'array',
     ];
 
     public function citizen()

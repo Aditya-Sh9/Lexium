@@ -11,9 +11,9 @@ const providerLinks = [
 ];
 
 const citizenLinks = [
-  { to: '/citizen/dashboard',  label: 'Dashboard',  icon: LayoutDashboard },
-  { to: '/citizen/petitions',  label: 'Petitions',  icon: FileText },
-  { to: '/citizen/history',    label: 'History',    icon: Clock },
+  { to: '/citizen/dashboard',  label: 'Dashboard',    icon: LayoutDashboard },
+  { to: '/citizen/petitions',  label: 'My Cases',     icon: FileText },
+  { to: '/citizen/history',    label: 'Case History', icon: Clock },
 ];
 
 const adminLinks = [

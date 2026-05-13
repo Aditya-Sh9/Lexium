@@ -3,10 +3,14 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Mail;
 use App\Models\User;
 use App\Models\Provider;
 use App\Models\Appointment;
 use App\Models\Petition;
+use App\Models\Transaction;
+use App\Mail\ProviderApproved;
+use App\Mail\ProviderRejected;
 
 class AdminController extends Controller
 {
@@ -97,6 +101,11 @@ class AdminController extends Controller
             $user->update(['status' => 'approved']);
         }
 
+        // Send approval email (silently fails if mail not configured)
+        try {
+            Mail::to($provider->email)->send(new ProviderApproved($provider->name));
+        } catch (\Throwable) {}
+
         return response()->json([
             'message'  => 'Provider approved successfully',
             'provider' => $provider->fresh(),
@@ -129,6 +138,11 @@ class AdminController extends Controller
                 'rejection_reason' => $reason,
             ]);
         }
+
+        // Send rejection email (silently fails if mail not configured)
+        try {
+            Mail::to($provider->email)->send(new ProviderRejected($provider->name, $reason));
+        } catch (\Throwable) {}
 
         return response()->json([
             'message'  => 'Provider rejected',
@@ -204,5 +218,93 @@ class AdminController extends Controller
         $user->delete();
 
         return response()->json(['message' => 'User deleted successfully']);
+    }
+
+    /**
+     * GET /admin/providers/{id}/stats
+     * Returns enriched provider stats for the admin profile modal.
+     */
+    public function providerStats(Request $request, $id)
+    {
+        // Accept either a provider's own _id OR the associated user's _id
+        $provider = Provider::find($id) ?? Provider::where('user_id', $id)->first();
+        if (!$provider) {
+            return response()->json(['error' => 'Provider not found'], 404);
+        }
+
+        $pid = (string) $provider->_id;
+
+        $casesClosed   = Appointment::where('provider_id', $pid)->where('status', 'completed')->count();
+        $totalEarned   = Transaction::where('provider_id', $pid)->where('status', 'cleared')->sum('amount');
+        $pendingEscrow = Transaction::where('provider_id', $pid)->where('status', 'pending')->sum('amount');
+        $transactions  = Transaction::where('provider_id', $pid)->orderBy('created_at', 'desc')->limit(10)->get();
+
+        // Compute actual badges
+        $badges = [];
+        if (($provider->rating ?? 0) >= 4.5) $badges[] = 'Top Rated Advocate';
+        if ($casesClosed >= 10) $badges[] = 'Flawless Record';
+
+        // Leaderboard position
+        $allProviders = Provider::where('status', 'approved')
+            ->orderBy('rating', 'desc')
+            ->orderBy('review_count', 'desc')
+            ->get(['_id']);
+        $leaderboardPosition = null;
+        foreach ($allProviders as $idx => $p) {
+            if ((string) $p->_id === $pid) {
+                $leaderboardPosition = $idx + 1;
+                break;
+            }
+        }
+
+        $tier = match (true) {
+            $casesClosed >= 50 => 'Tier V',
+            $casesClosed >= 30 => 'Tier IV',
+            $casesClosed >= 15 => 'Tier III',
+            $casesClosed >= 5  => 'Tier II',
+            default            => 'Tier I',
+        };
+
+        return response()->json([
+            'provider'           => $provider,
+            'casesClosed'        => $casesClosed,
+            'totalEarned'        => $totalEarned,
+            'pendingEscrow'      => $pendingEscrow,
+            'recentTransactions' => $transactions,
+            'badges'             => $badges,
+            'tier'               => $tier,
+            'leaderboardPosition'=> $leaderboardPosition,
+        ]);
+    }
+
+    /**
+     * POST /admin/providers/{id}/award
+     * Award a performance bonus directly to a provider's ledger.
+     */
+    public function awardProvider(Request $request, $id)
+    {
+        $provider = Provider::find($id) ?? Provider::where('user_id', $id)->first();
+        if (!$provider) {
+            return response()->json(['error' => 'Provider not found'], 404);
+        }
+
+        $validated = $request->validate([
+            'amount' => 'required|numeric|min:1|max:1000000',
+            'reason' => 'required|string|max:255',
+        ]);
+
+        Transaction::create([
+            'transaction_id' => 'AWD-' . rand(1000, 9999),
+            'provider_id'    => (string) $provider->_id,
+            'client_name'    => 'Admin Award',
+            'type'           => $validated['reason'],
+            'amount'         => (float) $validated['amount'],
+            'status'         => 'cleared',
+            'date'           => now()->toDateString(),
+        ]);
+
+        return response()->json([
+            'message' => "₹{$validated['amount']} awarded to {$provider->name} successfully.",
+        ]);
     }
 }

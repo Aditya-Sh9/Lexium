@@ -1,0 +1,462 @@
+LEXIUM — Complete Project Context Document
+What is Lexium?
+Lexium is a full-stack legal services marketplace that connects citizens (people seeking legal help) with legal service providers (advocates, mediators, arbitrators, etc.). It is a semester project for INT 221 at LPU, built to production-quality standards.
+
+The platform has three distinct user roles — Citizen, Provider, and Admin — each with their own dashboard, workflows, and protected routes.
+
+Tech Stack
+Layer	Technology
+Frontend	React 19, Vite, TailwindCSS v4, Framer Motion, react-router v7
+Backend	Laravel 13 (PHP 8.4), MongoDB via laravel-mongodb ODM
+Auth	Firebase Authentication (email/password) for Citizens & Providers; direct MongoDB bcrypt for Admins
+Database	MongoDB (all collections)
+Notifications	React Hot Toast (UI), SweetAlert2 (confirmations), Laravel Mail (email)
+Deployment	Docker (configured for Render)
+Frontend base URL (API): VITE_API_URL env var, defaults to http://localhost:8000/api
+
+Project Directory Structure
+
+PROJECT/
+├── frontend/
+│   ├── src/
+│   │   ├── App.jsx                          # All routes defined here
+│   │   ├── main.jsx
+│   │   ├── config/firebase.js               # Firebase init
+│   │   ├── context/AuthContext.jsx          # Auth state, user role, Firebase session
+│   │   ├── services/api.js                  # Fetch wrapper, MongoDB normalizer
+│   │   ├── layouts/
+│   │   │   ├── MainLayout.jsx               # Navbar + Footer wrapper
+│   │   │   └── DashboardLayout.jsx          # Sidebar nav for dashboards
+│   │   ├── components/
+│   │   │   ├── common/
+│   │   │   │   ├── Navbar.jsx
+│   │   │   │   ├── Footer.jsx
+│   │   │   │   ├── DashboardNav.jsx         # Role-aware sidebar navigation
+│   │   │   │   └── ProtectedRoute.jsx       # Role + approval guard
+│   │   │   └── ui/
+│   │   │       ├── RatingStars.jsx
+│   │   │       ├── Badge.jsx
+│   │   │       ├── SearchBar.jsx
+│   │   │       ├── CategoryCard.jsx
+│   │   │       ├── ProviderCard.jsx
+│   │   │       └── AnimatedBackground.jsx
+│   │   └── pages/
+│   │       ├── Home.jsx
+│   │       ├── auth/
+│   │       │   ├── Login.jsx
+│   │       │   ├── Register.jsx
+│   │       │   ├── ProviderOnboarding.jsx
+│   │       │   ├── PendingApproval.jsx
+│   │       │   └── RejectedApplication.jsx
+│   │       ├── providers/
+│   │       │   ├── ProviderListing.jsx      # Public: browse all providers
+│   │       │   └── ProviderProfile.jsx      # Public: single provider page + book button
+│   │       ├── booking/
+│   │       │   └── BookingFlow.jsx          # Citizen books appointment
+│   │       ├── dashboard/
+│   │       │   ├── CitizenDashboard.jsx     # Citizen home
+│   │       │   └── ProviderDashboard.jsx    # Provider home
+│   │       ├── citizen/
+│   │       │   ├── CitizenPetitions.jsx     # Petition management + timeline
+│   │       │   └── CitizenHistory.jsx       # Closed cases + leave review
+│   │       ├── provider/
+│   │       │   ├── ProviderDocket.jsx       # Petition queue + appointment queue
+│   │       │   ├── ProviderLedger.jsx       # Earnings & transactions
+│   │       │   ├── ProviderEminence.jsx     # Reputation/badges/tier page
+│   │       │   └── ProviderProfileEdit.jsx  # Edit provider details
+│   │       ├── admin/
+│   │       │   ├── AdminDashboard.jsx       # Stats overview
+│   │       │   ├── AdminProviders.jsx       # Approve/reject providers
+│   │       │   └── AdminUsers.jsx           # User management + provider stats modal
+│   │       └── public/
+│   │           ├── About.jsx
+│   │           ├── Contact.jsx
+│   │           ├── Guidelines.jsx
+│   │           ├── Help.jsx
+│   │           ├── Privacy.jsx
+│   │           └── Terms.jsx
+└── backend/
+    ├── routes/api.php                       # All API routes
+    ├── app/
+    │   ├── Models/
+    │   │   ├── User.php
+    │   │   ├── Provider.php
+    │   │   ├── Appointment.php
+    │   │   ├── Petition.php
+    │   │   └── Transaction.php
+    │   ├── Http/
+    │   │   ├── Controllers/
+    │   │   │   ├── AuthController.php
+    │   │   │   ├── AdminController.php
+    │   │   │   ├── CitizenController.php
+    │   │   │   └── ProviderController.php
+    │   │   └── Middleware/
+    │   │       ├── FirebaseAuthMiddleware.php
+    │   │       └── AdminAuthMiddleware.php
+    │   └── Mail/
+    │       ├── ProviderApproved.php
+    │       └── ProviderRejected.php
+    └── resources/views/emails/
+        ├── provider-approved.blade.php
+        └── provider-rejected.blade.php
+Authentication System
+Citizens & Providers — Firebase Auth
+Firebase email/password sign-in
+On every API call, api.js retrieves the current Firebase JWT with auth.currentUser.getIdToken() and sends it as Authorization: Bearer <token>
+Falls back to localStorage.getItem('auth_token') if Firebase is unavailable
+Backend FirebaseAuthMiddleware verifies the token via Firebase Admin SDK and attaches firebase_uid to the request
+Controllers call resolveUser() / resolveProvider() which look up the User/Provider by firebase_uid
+Also sends X-Mock-Role header (from localStorage.user.role) for dev convenience
+Admins — Direct MongoDB Auth
+POST /api/admin/login with email + password
+Backend checks bcrypt hash stored on User document
+Returns a session token stored as admin_token on the User doc
+Frontend stores token in localStorage as auth_token
+AdminAuthMiddleware reads the token from the Authorization header and matches it against admin_token in the database
+Route Guards (Frontend)
+ProtectedRoute component checks:
+
+Is user authenticated?
+Does user role match allowedRoles?
+If requireApproved is set, is provider status approved?
+Pending providers → /pending-approval
+Rejected providers → /rejected-application
+DashboardRedirect at /dashboard routes to the correct dashboard by role.
+
+Database Models
+User
+
+_id             ObjectId
+firebase_uid    string (Firebase UID, null for admins)
+name            string
+email           string
+phone           string
+avatar_url      string
+role            'citizen' | 'provider' | 'admin'
+status          'active' (citizen/admin) | 'pending' | 'approved' | 'rejected' (provider)
+password_hash   string (admin only, bcrypt)
+admin_token     string (admin session token)
+rejection_reason string (provider only)
+created_at      timestamp
+Provider
+Separate collection from User (linked by user_id):
+
+
+_id                ObjectId
+user_id            ObjectId → User._id
+name               string
+email              string
+service_type       'Advocate' | 'Mediator' | 'Arbitrator' | 'Notary' | 'Document Writer' | 'Tax Consultant'
+specialization     string
+bar_council_id     string
+location           string
+experience         number (years)
+bio                string
+price_range        string (e.g. "₹500–₹2000")
+consultation_fee   number (rupees, used when completing appointment)
+availability       string
+services           array of strings
+status             'pending' | 'approved' | 'rejected'
+is_verified        boolean
+rating             number (average, recalculated on review submit)
+review_count       number
+rating_count       number
+reviews            array of { citizen_name, rating, review, created_at }
+badges             array of strings
+Appointment
+
+_id            ObjectId
+citizen_id     ObjectId → User._id
+provider_id    ObjectId → Provider._id
+citizen_name   string
+provider_name  string
+type           string (case/service type)
+date           string (YYYY-MM-DD)
+time           string (e.g. "10:00 AM")
+status         'pending' | 'confirmed' | 'in-progress' | 'completed' | 'cancelled' | 'declined'
+notes          string (case description)
+reviewed       boolean (citizen has submitted a review for this)
+created_at     timestamp
+Petition
+
+_id             ObjectId
+petition_id     string (human-readable, e.g. "PET-1029")
+citizen_id      ObjectId → User._id
+provider_id     ObjectId → Provider._id
+citizen_name    string
+provider_name   string
+type            string
+details         string
+status          'pending' | 'under-review' | 'in-progress' | 'awaiting-documents'
+                | 'resolved' | 'closed' | 'declined' | 'accepted'
+next_step       string (instructional message shown to citizen)
+provider_notes  string (message from provider, shown in citizen view)
+timeline        array of { action: string, note: string, timestamp: ISO string }
+created_at      timestamp
+Transaction
+
+_id             ObjectId
+transaction_id  string (e.g. "TRX-1234" or "AWD-5678")
+provider_id     ObjectId → Provider._id
+client_name     string
+type            string (service type or award reason)
+amount          number (rupees)
+status          'pending' | 'cleared' | 'refunded'
+date            timestamp
+Complete API Reference
+Public (no auth)
+Method	Endpoint	Description
+GET	/api/providers	List all approved providers, sorted by rating
+GET	/api/providers/{id}	Single provider detail
+GET	/api/categories	6 service categories array
+GET	/api/leaderboard	Top 20 providers by rating
+POST	/api/admin/login	Admin login → returns {user, token}
+Firebase-protected (Authorization: Bearer <firebase_jwt>)
+Auth sync:
+
+Method	Endpoint	Description
+POST	/api/auth/sync	Sync Firebase user to MongoDB on first login
+GET	/api/auth/status	Check user status (used by ProtectedRoute)
+Provider endpoints (/api/provider/...):
+
+Method	Endpoint	Description
+GET	/provider/dashboard	Stats, today's docket, accrued value, reviews, badges, leaderboard rank
+GET	/provider/docket	Pending petitions, active cases (appointments), active petitions (open cases)
+GET	/provider/ledger	clearedValue, pendingEscrow, last 50 transactions
+GET	/provider/eminence	Tier, standing, badges, leaderboard position, stats
+GET	/provider/profile	Full provider object
+PUT	/provider/profile	Update profile fields
+POST	/provider/petitions/{id}/accept	Accept petition → status='under-review', auto-create appointment
+POST	/provider/petitions/{id}/decline	Decline petition, optional reason body param
+PUT	/provider/petitions/{id}/status	Update petition status + optional note
+POST	/provider/appointments/{id}/accept	Accept appointment → status='confirmed'
+POST	/provider/appointments/{id}/decline	Decline appointment
+PUT	/provider/appointments/{id}/complete	Complete appointment → create transaction, resolve related petition
+DELETE	/provider/transactions/{id}	Delete a pending or refunded transaction (cannot delete cleared)
+Citizen endpoints (/api/citizen/...):
+
+Method	Endpoint	Description
+GET	/citizen/dashboard	Upcoming appointments (5), top providers (5)
+GET	/citizen/petitions	All petitions by this citizen
+POST	/citizen/petitions	Create petition: {provider_id, type, details}
+DELETE	/citizen/petitions/{id}	Withdraw petition (only if status='pending')
+POST	/citizen/appointments	Book appointment: {provider_id, date, time, type, case_description}
+PUT	/citizen/appointments/{id}/reschedule	Reschedule: {date, time}, resets status to 'pending'
+DELETE	/citizen/appointments/{id}	Cancel appointment (not if completed)
+GET	/citizen/history	Completed + cancelled appointments
+POST	/citizen/appointments/{id}/review	Submit review: {rating, review} — only for completed, non-reviewed
+Admin-protected (Authorization: Bearer <admin_token>)
+Method	Endpoint	Description
+GET	/admin/dashboard	Aggregate stats, recent users, pending providers, top 10 leaderboard
+GET	/admin/providers	All providers (optionally ?status=pending)
+GET	/admin/providers/{id}/stats	Enriched provider stats for modal
+POST	/admin/providers/{id}/approve	Approve provider → set verified, send email
+POST	/admin/providers/{id}/reject	Reject with {reason} → send email
+POST	/admin/providers/{id}/award	Award bonus: {amount, reason} → creates cleared transaction
+GET	/admin/users	All users, optionally `?role=citizen
+DELETE	/admin/users/{id}	Delete user (+ provider record if applicable)
+DELETE	/admin/providers/{id}	Delete provider + associated user
+GET	/admin/leaderboard	Top 20 providers
+Core Business Workflows
+1. Petition Lifecycle (Full)
+
+Citizen creates petition
+        │
+        ▼ status = 'pending'
+        │ timeline = [{ action: 'submitted' }]
+        │
+Provider accepts OR declines
+        │
+  ┌─────┴──────┐
+decline       accept
+  │             │
+  ▼             ▼ status = 'under-review'
+'declined'    Auto-create Appointment (3 days out, 10:00 AM, status='confirmed')
+              │
+         Provider updates status via PUT /provider/petitions/{id}/status
+              │
+              ├── 'in-progress'
+              ├── 'awaiting-documents'
+              │
+              └── When related Appointment is completed →
+                  status auto-set to 'resolved'
+                  │
+                  ▼ (provider can close manually)
+                'closed'
+Status colors (frontend):
+
+pending → yellow
+under-review → blue
+in-progress → indigo
+awaiting-documents → orange
+resolved → green
+closed → grey
+declined → red
+2. Appointment Lifecycle
+
+Citizen books → status='pending', reviewed=false
+Provider accepts → status='confirmed'
+Provider completes → status='completed'
+                  → Transaction created (status='cleared', amount=provider.consultation_fee)
+                  → Related petition auto-set to 'resolved'
+Citizen reviews → POST /citizen/appointments/{id}/review
+               → Provider.reviews[] appended
+               → Provider rating recalculated (avg)
+               → appointment.reviewed = true
+3. Provider Reputation
+Rating: Arithmetic mean of all submitted review ratings (recalculated on each new review)
+Review Count / Rating Count: Incremented on review submit
+Badges: Computed on each dashboard load:
+"Top Rated Advocate" — rating ≥ 4.5
+"Flawless Record" — 10+ completed cases
+"Pro Bono Champion" — (shown in eminence, based on pro bono case count)
+Tier (based on cases closed):
+Tier I: 0 cases
+Tier II: 5+ cases
+Tier III: 15+ cases
+Tier IV: 30+ cases
+Tier V: 50+ cases
+Standing: "Exemplary" if rating ≥ 4.5, else "Good"
+Leaderboard: Top 20 approved providers ordered by rating DESC, then review_count DESC
+4. Transactions / Ledger
+Pending: Created when appointment moves to completed (initially in escrow)
+Cleared: Finalized earnings available for withdrawal
+Refunded: Disputed/reversed by admin
+Admin can award bonus transactions directly (type = custom reason, status = 'cleared')
+Provider can delete pending or refunded transactions (cannot delete cleared)
+Ledger export to CSV is available
+5. Admin Provider Approval
+
+Provider registers → User.status='pending', Provider.status='pending'
+Admin sees in dashboard → pending providers list
+Admin opens provider stats modal → enriched details, earnings, badges
+Admin approves → Provider.status='approved', User.status='active', is_verified=true
+              → ProviderApproved email sent (if SMTP configured)
+Admin rejects → Provider.status='rejected', rejection_reason stored
+             → ProviderRejected email sent
+Frontend Routing Map (App.jsx)
+
+/                          → Home.jsx (public landing)
+/login                     → Login.jsx
+/register                  → Register.jsx
+/provider-onboarding       → ProviderOnboarding.jsx
+/pending-approval          → PendingApproval.jsx
+/rejected-application      → RejectedApplication.jsx
+/providers                 → ProviderListing.jsx (public browse)
+/providers/:id             → ProviderProfile.jsx (public profile + book button)
+/dashboard                 → DashboardRedirect (role-based redirect)
+/about, /terms, /privacy,
+/guidelines, /help,
+/contact                   → Static public pages
+
+Protected — Provider (approved only):
+/provider/dashboard        → ProviderDashboard.jsx
+/provider/docket           → ProviderDocket.jsx
+/provider/ledger           → ProviderLedger.jsx
+/provider/eminence         → ProviderEminence.jsx
+/provider/profile          → ProviderProfileEdit.jsx
+
+Protected — Citizen:
+/citizen/dashboard         → CitizenDashboard.jsx
+/citizen/petitions         → CitizenPetitions.jsx
+/citizen/history           → CitizenHistory.jsx
+/citizen/book/:providerId  → BookingFlow.jsx
+/book/:providerId          → BookingFlow.jsx
+
+Protected — Admin:
+/admin/dashboard           → AdminDashboard.jsx
+/admin/providers           → AdminProviders.jsx
+/admin/users               → AdminUsers.jsx
+API Service (frontend/src/services/api.js)
+
+// All requests go through this wrapper
+api.get('/endpoint')
+api.post('/endpoint', { data })
+api.put('/endpoint', { data })
+api.delete('/endpoint')
+MongoDB normalization: Automatically converts {"$oid": "hexstring"} format (MongoDB Extended JSON) to plain strings. Ensures every object has both _id and id set to the same value.
+
+Auth header: Automatically attaches Authorization: Bearer <token> from Firebase currentUser or localStorage fallback.
+
+Key Page Summaries
+CitizenDashboard
+Shows 5 upcoming appointments (pending/confirmed) with Reschedule and Cancel buttons
+Reschedule opens a modal with date picker + 5 time slot buttons
+Shows top 5 rated providers as a sidebar with links to their profiles
+Quick action cards: "My Petitions" → /citizen/petitions, "Past Records" → /citizen/history
+ProviderDashboard
+Stats row: Active Clients, Weekly Appointments, Badges Earned (e.g. "2 / 3"), Cases Closed
+Today's docket: list of appointments with Accept/Decline for pending
+Accrued value card: Cleared + Pending Escrow + Total
+Recent Reviews panel (last 3)
+Path to Eminence: progress bar from 0→50 cases, 5 milestone markers
+Standing badge and Leaderboard rank shown in header
+CitizenPetitions
+Filter tabs: Active / Closed (with counts)
+Each petition card shows: ID, status badge, provider name, type
+"Next Step" callout (what citizen should do)
+"Provider Notes" callout (message from provider, shown when present)
+Expand button → shows original request text + visual case timeline
+Withdraw button (only for pending petitions)
+CitizenHistory
+Table of completed/cancelled cases
+"Leave Review" button for completed, un-reviewed appointments → opens star-rating modal (1–5 stars + text)
+"Reviewed" badge shown after review submitted
+"Book Again" link to provider's public profile
+ProviderDocket
+Incoming Petitions section: cards with Accept + Decline buttons; decline prompts for reason via SweetAlert
+Open Cases section: accepted/in-progress/awaiting-documents petitions; "Update Status" button opens modal with status dropdown + note field
+Active Appointments section: table with Accept/Decline for pending, Complete button for confirmed; Complete triggers transaction creation
+ProviderLedger
+3 summary cards: Cleared Value, Pending Escrow, Total Accrued
+Search (client name, type, transaction ID) + status filter tabs (All/Cleared/Pending/Refunded)
+Transaction table with delete button (pending/refunded only)
+CSV export button
+AdminUsers
+Filter tabs by role: All / Citizens / Providers / Admins
+Search by name/email
+Click a provider row → opens ProviderProfileModal with full stats, earnings, badges, recent transactions, and award bonus form
+Delete button for any user
+Email Notifications
+Mail driver is set via MAIL_MAILER in .env.
+
+Default: log (no actual emails, safe for development)
+Set to smtp with credentials to activate real sending
+Events that trigger emails:
+
+AdminController::approveProvider() → sends ProviderApproved mailable
+AdminController::rejectProvider() → sends ProviderRejected mailable
+Both use Blade templates in resources/views/emails/.
+
+Environment Setup Notes
+Backend .env key vars:
+
+
+DB_CONNECTION=mongodb
+DB_HOST=...
+DB_PORT=27017
+DB_DATABASE=lexium
+FIREBASE_CREDENTIALS=...  (path to service account JSON)
+MAIL_MAILER=log           (or smtp)
+MAIL_HOST=...
+MAIL_PORT=...
+MAIL_USERNAME=...
+MAIL_PASSWORD=...
+Frontend .env:
+
+
+VITE_API_URL=http://localhost:8000/api
+VITE_FIREBASE_API_KEY=...
+VITE_FIREBASE_AUTH_DOMAIN=...
+VITE_FIREBASE_PROJECT_ID=...
+(etc.)
+Known Patterns & Conventions
+Backend resolvers: Every protected controller starts by calling resolveUser() or resolveProvider() to get the authenticated entity from firebase_uid.
+MongoDB IDs: Always use $id->toString() or cast _id to string before returning JSON; the frontend normalizer handles {$oid: "..."} but string is preferred.
+No hardcoded amounts: completeAppointment() uses provider->consultation_fee (not hardcoded ₹2500 anymore).
+Petition → Appointment link: Accepting a petition auto-creates an appointment; completing an appointment auto-resolves the related petition. These are always in sync.
+Reviews on appointments, not petitions: The reviewed flag and review submission is tied to Appointment, not Petition.
+Timeline array: Every petition has a timeline array that logs every status change with {action, note, timestamp}. Initial entry is always {action: 'submitted'}.
+Leaderboard route exists twice: Once inside firebase.auth middleware group and once publicly — both hit the same controller method.
+End of project context. This document covers all routes, models, workflows, and frontend pages as of May 2026.
+
