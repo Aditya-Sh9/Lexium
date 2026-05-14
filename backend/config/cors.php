@@ -16,7 +16,7 @@ return [
 
     'allowed_methods' => ['*'],
 
-    'allowed_origins' => explode(',', env('CORS_ALLOWED_ORIGINS', 'http://localhost:5173,http://localhost:3000','https://lexium-liard.vercel.app')),
+    'allowed_origins' => explode(',', env('CORS_ALLOWED_ORIGINS', 'http://localhost:5173,http://localhost:3000','https://lexium-liard.vercel.app', 'https://lexium-law.vercel.app')),
 
     'allowed_origins_patterns' => [],
 
