@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
-import { Clock, Star, Search, MessageSquarePlus, X, CheckCircle2 } from 'lucide-react';
+import { Clock, Star, Search, MessageSquarePlus, X, CheckCircle2, ShieldAlert } from 'lucide-react';
 import { Link } from 'react-router';
 import api from '../../services/api';
 import { themeToast } from '../../utils/alert';
+import RaiseIssueModal from '../../components/common/RaiseIssueModal';
 
 function ReviewModal({ appointment, onClose, onSubmitted }) {
   const [rating, setRating] = useState(0);
@@ -111,6 +112,8 @@ export default function CitizenHistory() {
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [reviewTarget, setReviewTarget] = useState(null);
+  const [issueTarget, setIssueTarget] = useState(null);
+  const [complaints, setComplaints] = useState([]);
 
   const fetchHistory = async () => {
     setLoading(true);
@@ -124,7 +127,27 @@ export default function CitizenHistory() {
     }
   };
 
-  useEffect(() => { fetchHistory(); }, []);
+  const fetchComplaints = async () => {
+    try {
+      const data = await api.get('/citizen/complaints');
+      setComplaints(Array.isArray(data) ? data : []);
+    } catch {
+      setComplaints([]);
+    }
+  };
+
+  useEffect(() => { fetchHistory(); fetchComplaints(); }, []);
+
+  // Surface whether a completed/cancelled record already has an active
+  // (open/under-review) complaint so we don't show a duplicate "Report" CTA.
+  const activeComplaintFor = (record) => {
+    const aptId = record._id || record.id;
+    const petId = record.petition_id;
+    return complaints.find(c =>
+      ['open', 'under-review'].includes(c.status) &&
+      ((aptId && c.appointment_id === aptId) || (petId && c.petition_id === petId))
+    );
+  };
 
   const filteredHistory = history.filter(record => {
     if (!searchQuery) return true;
@@ -148,6 +171,20 @@ export default function CitizenHistory() {
           appointment={reviewTarget}
           onClose={() => setReviewTarget(null)}
           onSubmitted={fetchHistory}
+        />
+      )}
+
+      {issueTarget && (
+        <RaiseIssueModal
+          context={{
+            petition_id:    issueTarget.petition_id || null,
+            petition_code:  issueTarget.petition_code || null,
+            appointment_id: issueTarget._id || issueTarget.id,
+            provider_name:  issueTarget.provider_name,
+            type:           issueTarget.type,
+          }}
+          onClose={() => setIssueTarget(null)}
+          onSubmitted={fetchComplaints}
         />
       )}
 
@@ -213,49 +250,72 @@ export default function CitizenHistory() {
                     </td>
                   </tr>
                 ) : (
-                  filteredHistory.map((record, i) => (
-                    <tr key={record._id || record.id || i}>
-                      <td><span className="strong">{record.provider_name}</span></td>
-                      <td className="muted">{record.type}</td>
-                      <td className="body-sm">
-                        <span className="inline-flex items-center gap-1.5">
-                          <Clock size={12} className="text-surface-400" />
-                          {new Date(record.updated_at).toLocaleDateString('en-IN', { year: 'numeric', month: 'short', day: 'numeric' })}
-                        </span>
-                      </td>
-                      <td>
-                        <span className={`lx-badge ${record.status === 'completed' ? 'lx-badge-success' : 'lx-badge-danger'}`}>
-                          <span className="lx-badge-dot" style={{ background: record.status === 'completed' ? 'var(--success-600)' : 'var(--danger-600)' }} />
-                          {record.status}
-                        </span>
-                      </td>
-                      <td>
-                        <div className="flex items-center justify-end gap-2">
-                          {record.status === 'completed' && !record.reviewed && (
-                            <button
-                              onClick={() => setReviewTarget(record)}
-                              className="lx-btn lx-btn-sm lx-btn-gold"
-                            >
-                              <Star size={12} className="fill-current" /> Leave Review
-                            </button>
-                          )}
-                          {record.status === 'completed' && record.reviewed && (
-                            <span className="lx-badge lx-badge-success">
-                              <CheckCircle2 size={11} /> Reviewed
-                            </span>
-                          )}
-                          {record.provider_id && (
-                            <Link
-                              to={`/book/${record.provider_id}`}
-                              className="body-sm text-[var(--color-primary-700)] hover:underline"
-                            >
-                              File new case
-                            </Link>
-                          )}
-                        </div>
-                      </td>
-                    </tr>
-                  ))
+                  filteredHistory.map((record, i) => {
+                    const existing = activeComplaintFor(record);
+                    const canReport = record.status === 'completed' || record.status === 'cancelled';
+
+                    return (
+                      <tr key={record._id || record.id || i}>
+                        <td><span className="strong">{record.provider_name}</span></td>
+                        <td className="muted">{record.type}</td>
+                        <td className="body-sm">
+                          <span className="inline-flex items-center gap-1.5">
+                            <Clock size={12} className="text-surface-400" />
+                            {new Date(record.updated_at).toLocaleDateString('en-IN', { year: 'numeric', month: 'short', day: 'numeric' })}
+                          </span>
+                        </td>
+                        <td>
+                          <span className={`lx-badge ${record.status === 'completed' ? 'lx-badge-success' : 'lx-badge-danger'}`}>
+                            <span className="lx-badge-dot" style={{ background: record.status === 'completed' ? 'var(--success-600)' : 'var(--danger-600)' }} />
+                            {record.status}
+                          </span>
+                        </td>
+                        <td>
+                          <div className="flex items-center justify-end gap-2 flex-wrap">
+                            {record.status === 'completed' && !record.reviewed && (
+                              <button
+                                onClick={() => setReviewTarget(record)}
+                                className="lx-btn lx-btn-sm lx-btn-gold"
+                              >
+                                <Star size={12} className="fill-current" /> Leave Review
+                              </button>
+                            )}
+                            {record.status === 'completed' && record.reviewed && (
+                              <span className="lx-badge lx-badge-success">
+                                <CheckCircle2 size={11} /> Reviewed
+                              </span>
+                            )}
+                            {record.provider_id && (
+                              <Link
+                                to={`/book/${record.provider_id}`}
+                                className="body-sm text-[var(--color-primary-700)] hover:underline"
+                              >
+                                File new case
+                              </Link>
+                            )}
+                            {canReport && (existing ? (
+                              <span
+                                className="inline-flex items-center gap-1 body-xs muted"
+                                title={`Complaint ${existing.complaint_id} · ${existing.status}`}
+                              >
+                                <ShieldAlert size={11} style={{ color: 'var(--brass-mid)' }} />
+                                Issue {existing.status === 'under-review' ? 'under review' : 'filed'}
+                              </span>
+                            ) : (
+                              <button
+                                onClick={() => setIssueTarget(record)}
+                                className="inline-flex items-center gap-1 body-xs muted hover:text-[var(--brass-dark)] transition-colors cursor-pointer"
+                                title="Privately report an issue to Lexium administrators"
+                              >
+                                <ShieldAlert size={11} />
+                                Need help?
+                              </button>
+                            ))}
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })
                 )}
               </tbody>
             </table>

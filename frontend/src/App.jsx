@@ -34,12 +34,14 @@ import ProviderProfileEdit from './pages/provider/ProviderProfileEdit';
 import CitizenDashboard from './pages/dashboard/CitizenDashboard';
 import CitizenPetitions from './pages/citizen/CitizenPetitions';
 import CitizenHistory from './pages/citizen/CitizenHistory';
+import CitizenIssues from './pages/citizen/CitizenIssues';
 
 // Admin Pages
 import AdminDashboard from './pages/admin/AdminDashboard';
 import AdminProviders from './pages/admin/AdminProviders';
 import AdminUsers from './pages/admin/AdminUsers';
 import AdminEscrow from './pages/admin/AdminEscrow';
+import AdminComplaints from './pages/admin/AdminComplaints';
 
 
 // Smart redirect: /dashboard → role-specific dashboard
@@ -94,6 +96,7 @@ export default function App() {
               <Route path="dashboard" element={<CitizenDashboard />} />
               <Route path="petitions" element={<CitizenPetitions />} />
               <Route path="history" element={<CitizenHistory />} />
+              <Route path="issues" element={<CitizenIssues />} />
             </Route>
             <Route path="book/:providerId" element={<BookingFlow />} />
           </Route>
@@ -110,6 +113,7 @@ export default function App() {
               <Route path="providers" element={<AdminProviders />} />
               <Route path="users" element={<AdminUsers />} />
               <Route path="escrow" element={<AdminEscrow />} />
+              <Route path="complaints" element={<AdminComplaints />} />
             </Route>
           </Route>
         </Route>

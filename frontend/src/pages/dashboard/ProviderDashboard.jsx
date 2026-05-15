@@ -5,6 +5,7 @@ import { useAuth } from '../../context/AuthContext';
 import { Link, useNavigate } from 'react-router';
 import api from '../../services/api';
 import { motion } from 'framer-motion';
+import ProviderComplianceCard from '../../components/common/ProviderComplianceCard';
 
 const TIER_MILESTONES = [
   { label: 'Join Registry',      cases: 0,  done: true },
@@ -98,6 +99,9 @@ export default function ProviderDashboard() {
 
   return (
     <div className="max-w-[1440px] mx-auto px-6 md:px-8 pt-6 pb-14 font-sans bg-transparent">
+
+      {/* Compliance notices — generic, no complaint context exposed */}
+      <ProviderComplianceCard />
 
       {/* Header */}
       <motion.header

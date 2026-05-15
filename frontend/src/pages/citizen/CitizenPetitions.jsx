@@ -2,11 +2,12 @@ import { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import {
   FileText, Clock, AlertCircle, ChevronDown, ChevronUp,
-  Trash2, CheckCircle2, XCircle, Activity, MessageSquare,
+  Trash2, CheckCircle2, XCircle, Activity, MessageSquare, ShieldAlert,
 } from 'lucide-react';
 import { Link } from 'react-router';
 import api from '../../services/api';
 import { themeToast, themeAlert } from '../../utils/alert';
+import RaiseIssueModal from '../../components/common/RaiseIssueModal';
 
 // ── Status config ────────────────────────────────────────────────
 const STATUS_CONFIG = {
@@ -50,6 +51,8 @@ export default function CitizenPetitions() {
   const [expandedId, setExpandedId] = useState(null);
   const [actionLoading, setActionLoading] = useState(null);
   const [filter, setFilter] = useState('active');
+  const [issueTarget, setIssueTarget] = useState(null);
+  const [complaints, setComplaints] = useState([]);
 
   const fetchPetitions = async () => {
     setLoading(true);
@@ -63,7 +66,21 @@ export default function CitizenPetitions() {
     }
   };
 
-  useEffect(() => { fetchPetitions(); }, []);
+  const fetchComplaints = async () => {
+    try {
+      const data = await api.get('/citizen/complaints');
+      setComplaints(Array.isArray(data) ? data : []);
+    } catch {
+      setComplaints([]);
+    }
+  };
+
+  useEffect(() => { fetchPetitions(); fetchComplaints(); }, []);
+
+  const activeComplaintFor = (petitionId) =>
+    complaints.find(c =>
+      ['open', 'under-review'].includes(c.status) && c.petition_id === petitionId
+    );
 
   const handleWithdraw = async (id) => {
     const confirmed = await themeAlert.fire({
@@ -106,6 +123,19 @@ export default function CitizenPetitions() {
 
   return (
     <div className="max-w-[1440px] mx-auto px-6 md:px-8 pt-6 pb-12 font-sans bg-transparent">
+      {issueTarget && (
+        <RaiseIssueModal
+          context={{
+            petition_id:   issueTarget._id || issueTarget.id,
+            petition_code: issueTarget.petition_id,
+            provider_name: issueTarget.provider_name,
+            type:          issueTarget.type,
+          }}
+          onClose={() => setIssueTarget(null)}
+          onSubmitted={fetchComplaints}
+        />
+      )}
+
       <header className="mb-8 pb-5 flex flex-col sm:flex-row justify-between items-start sm:items-end gap-4" style={{ borderBottom: '1px solid var(--hairline)' }}>
         <div>
           <h1 className="lx-h1">My Cases</h1>
@@ -313,6 +343,32 @@ export default function CitizenPetitions() {
                           {actionLoading === petId ? 'Withdrawing…' : 'Withdraw'}
                         </button>
                       )}
+
+                      {/* Subtle complaint link — only for resolved/closed cases */}
+                      {['resolved', 'closed'].includes(petition.status) && (() => {
+                        const existing = activeComplaintFor(petId);
+                        if (existing) {
+                          return (
+                            <div
+                              className="flex items-center gap-1.5 body-xs muted px-1"
+                              title={`Complaint ${existing.complaint_id} · ${existing.status}`}
+                            >
+                              <ShieldAlert size={11} style={{ color: 'var(--brass-mid)' }} />
+                              Issue {existing.status === 'under-review' ? 'under review' : 'filed'}
+                            </div>
+                          );
+                        }
+                        return (
+                          <button
+                            onClick={() => setIssueTarget(petition)}
+                            className="flex items-center gap-1.5 body-xs muted hover:text-[var(--brass-dark)] transition-colors cursor-pointer text-left px-1"
+                            title="Privately report an issue to Lexium administrators"
+                          >
+                            <ShieldAlert size={11} />
+                            Need help with this case?
+                          </button>
+                        );
+                      })()}
                     </div>
                   </div>
                 </div>

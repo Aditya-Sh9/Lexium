@@ -5,6 +5,7 @@ use App\Http\Controllers\ProviderController;
 use App\Http\Controllers\CitizenController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\AdminController;
+use App\Http\Controllers\ComplaintController;
 use App\Http\Middleware\AdminAuthMiddleware;
 
 // ── Public routes ────────────────────────────────────────────────
@@ -43,6 +44,10 @@ Route::middleware('firebase.auth')->group(function () {
 
         // Transaction actions
         Route::delete('/transactions/{id}', [ProviderController::class, 'deleteTransaction']);
+
+        // Compliance notices (provider-facing — generic, no complaint context)
+        Route::get('/notices',                       [ProviderController::class, 'notices']);
+        Route::post('/notices/{id}/acknowledge',     [ProviderController::class, 'acknowledgeNotice']);
     });
 
     // ── Citizen Routes ───────────────────────────────────────────
@@ -58,6 +63,10 @@ Route::middleware('firebase.auth')->group(function () {
         Route::put('/appointments/{id}/reschedule',    [CitizenController::class, 'rescheduleAppointment']);
         Route::delete('/appointments/{id}',            [CitizenController::class, 'cancelAppointment']);
         Route::post('/appointments/{id}/review',       [CitizenController::class, 'submitReview']);
+
+        // Complaint / Issue Resolution
+        Route::get('/complaints',  [ComplaintController::class, 'index']);
+        Route::post('/complaints', [ComplaintController::class, 'store']);
     });
 });
 
@@ -66,6 +75,7 @@ Route::middleware([AdminAuthMiddleware::class])->prefix('admin')->group(function
     Route::get('/dashboard',                  [AdminController::class, 'dashboard']);
     Route::get('/providers',                  [AdminController::class, 'providers']);
     Route::get('/providers/{id}/stats',       [AdminController::class, 'providerStats']);
+    Route::get('/providers/{id}/complaint-history', [AdminController::class, 'providerComplaintHistory']);
     Route::post('/providers/{id}/approve',    [AdminController::class, 'approveProvider']);
     Route::post('/providers/{id}/reject',     [AdminController::class, 'rejectProvider']);
     Route::post('/providers/{id}/award',      [AdminController::class, 'awardProvider']);
@@ -77,6 +87,20 @@ Route::middleware([AdminAuthMiddleware::class])->prefix('admin')->group(function
     // Escrow management
     Route::get('/escrow',                     [AdminController::class, 'escrowTransactions']);
     Route::post('/transactions/{id}/release', [AdminController::class, 'releaseEscrow']);
+
+    // Complaint moderation
+    Route::get('/complaints',                       [AdminController::class, 'complaints']);
+    Route::get('/complaints/{id}',                  [AdminController::class, 'complaintDetail']);
+    Route::put('/complaints/{id}/status',           [AdminController::class, 'updateComplaintStatus']);
+    Route::post('/complaints/{id}/notes',           [AdminController::class, 'addComplaintNote']);
+    Route::post('/complaints/{id}/warn-provider',   [AdminController::class, 'warnProvider']);
+    Route::post('/complaints/{id}/deduct',          [AdminController::class, 'deductEarnings']);
+    Route::post('/complaints/{id}/hold-escrow',     [AdminController::class, 'holdEscrow']);
+
+    // Provider notice management
+    Route::post('/notices/{id}/clear',                       [AdminController::class, 'clearProviderNotice']);
+    Route::post('/notices/{id}/archive',                     [AdminController::class, 'archiveProviderNotice']);
+    Route::post('/providers/{id}/notices/clear-all',         [AdminController::class, 'clearAllProviderNotices']);
 });
 
 // ── Public Leaderboard (accessible by provider dashboards) ───────

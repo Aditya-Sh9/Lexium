@@ -44,10 +44,11 @@ export default function Navbar() {
     ];
   } else if (isAdmin) {
     navLinks = [
-      { to: '/admin/dashboard',  label: 'Dashboard' },
-      { to: '/admin/providers',  label: 'Providers' },
-      { to: '/admin/users',      label: 'Users' },
-      { to: '/admin/escrow',     label: 'Escrow' },
+      { to: '/admin/dashboard',   label: 'Dashboard' },
+      { to: '/admin/providers',   label: 'Providers' },
+      { to: '/admin/users',       label: 'Users' },
+      { to: '/admin/escrow',      label: 'Escrow' },
+      { to: '/admin/complaints',  label: 'Complaints' },
     ];
   } else if (user?.role === 'provider') {
     if (isPendingProvider) {
@@ -66,6 +67,7 @@ export default function Navbar() {
       { to: '/citizen/dashboard',  label: 'Dashboard' },
       { to: '/citizen/petitions',  label: 'My Cases' },
       { to: '/citizen/history',    label: 'Case History' },
+      { to: '/citizen/issues',     label: 'Support' },
       { to: '/providers',          label: 'Find Providers' },
     ];
   }

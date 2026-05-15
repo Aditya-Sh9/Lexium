@@ -8,6 +8,7 @@ use App\Models\Provider;
 use App\Models\Appointment;
 use App\Models\Petition;
 use App\Models\Transaction;
+use App\Models\ProviderNotice;
 
 class ProviderController extends Controller
 {
@@ -93,6 +94,11 @@ class ProviderController extends Controller
         $reviews = is_array($provider->reviews) ? $provider->reviews : [];
         $recentReviews = array_slice(array_reverse($reviews), 0, 3);
 
+        // Unacknowledged ACTIVE compliance notices for the dashboard banner.
+        $unreadNotices = ProviderNotice::where('provider_id', $pid)
+            ->where('status', 'active')
+            ->count();
+
         // Weekly appointments count
         $weeklyApts = Appointment::where('provider_id', $pid)
             ->where('date', '>=', now()->startOfWeek()->toDateString())
@@ -115,6 +121,66 @@ class ProviderController extends Controller
                 'monthlyTotal' => $escrowValue + $clearedValue,
             ],
             'pathProgress' => ['casesClosed' => $casesClosed, 'proBono' => 0],
+            'unreadNotices' => $unreadNotices,
+        ]);
+    }
+
+    /**
+     * GET /provider/notices
+     * Lists compliance notices for the current provider.
+     * The response shape is intentionally narrow — complaint IDs,
+     * citizen names, and case codes are never returned.
+     */
+    public function notices(Request $request)
+    {
+        $provider = $this->resolveProvider($request);
+        if (!$provider) return response()->json(['error' => 'Provider profile not found'], 404);
+
+        // Providers see only active (unacknowledged) and acknowledged notices.
+        // Cleared/archived notices are admin-only history.
+        $rows = ProviderNotice::where('provider_id', (string) $provider->_id)
+            ->visibleToProvider()
+            ->orderBy('created_at', 'desc')
+            ->limit(50)
+            ->get()
+            ->map(fn ($n) => $n->toProviderArray())
+            ->values();
+
+        return response()->json([
+            'notices' => $rows,
+            'unread'  => $rows->where('status', 'active')->count(),
+        ]);
+    }
+
+    /**
+     * POST /provider/notices/{id}/acknowledge
+     * Marks a compliance notice as acknowledged. Idempotent.
+     */
+    public function acknowledgeNotice(Request $request, $id)
+    {
+        $provider = $this->resolveProvider($request);
+        if (!$provider) return response()->json(['error' => 'Provider profile not found'], 404);
+
+        $notice = ProviderNotice::where('_id', $id)
+            ->where('provider_id', (string) $provider->_id)
+            ->visibleToProvider()
+            ->first();
+
+        if (!$notice) {
+            return response()->json(['error' => 'Notice not found'], 404);
+        }
+
+        if (!$notice->acknowledged) {
+            $notice->update([
+                'acknowledged'    => true,
+                'acknowledged_at' => now()->toISOString(),
+                'status'          => 'acknowledged',
+            ]);
+        }
+
+        return response()->json([
+            'message' => 'Notice acknowledged.',
+            'notice'  => $notice->fresh()->toProviderArray(),
         ]);
     }
 
