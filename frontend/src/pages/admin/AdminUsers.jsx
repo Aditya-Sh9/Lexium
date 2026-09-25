@@ -5,6 +5,7 @@ import {
   CheckCircle2, ShieldCheck, Gift, Lock
 } from 'lucide-react';
 import { formatRupees } from '../../utils/formatters';
+import { adminFetch } from '../../services/adminApi';
 
 const API = import.meta.env.VITE_API_URL || 'http://localhost:8000/api';
 
@@ -23,7 +24,7 @@ function ProviderProfileModal({ userId, onClose }) {
 
   useEffect(() => {
     setLoading(true);
-    fetch(`${API}/admin/providers/${userId}/stats`, {
+    adminFetch(`${API}/admin/providers/${userId}/stats`, {
       headers: { Authorization: `Bearer ${token}` },
     })
       .then(r => r.json())
@@ -37,7 +38,7 @@ function ProviderProfileModal({ userId, onClose }) {
     setAwarding(true);
     setAwardMsg('');
     try {
-      const res = await fetch(`${API}/admin/providers/${userId}/award`, {
+      const res = await adminFetch(`${API}/admin/providers/${userId}/award`, {
         method: 'POST',
         headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
         body: JSON.stringify({ amount: parseFloat(awardAmount), reason: awardReason }),
@@ -48,7 +49,7 @@ function ProviderProfileModal({ userId, onClose }) {
         setAwardAmount('');
         setAwardReason('');
         // Refresh stats to show updated earnings
-        fetch(`${API}/admin/providers/${userId}/stats`, {
+        adminFetch(`${API}/admin/providers/${userId}/stats`, {
           headers: { Authorization: `Bearer ${token}` },
         }).then(r => r.json()).then(setStats);
       } else {
@@ -278,7 +279,7 @@ export default function AdminUsers() {
   useEffect(() => {
     setLoading(true);
     const url = filterRole ? `${API}/admin/users?role=${filterRole}` : `${API}/admin/users`;
-    fetch(url, { headers: { Authorization: `Bearer ${token}` } })
+    adminFetch(url, { headers: { Authorization: `Bearer ${token}` } })
       .then(r => r.json())
       .then(setUsers)
       .catch(() => setUsers([]))
@@ -293,7 +294,7 @@ export default function AdminUsers() {
   const handleDelete = async (id) => {
     setDeleting(true);
     try {
-      const res = await fetch(`${API}/admin/users/${id}`, {
+      const res = await adminFetch(`${API}/admin/users/${id}`, {
         method: 'DELETE',
         headers: { Authorization: `Bearer ${token}` },
       });

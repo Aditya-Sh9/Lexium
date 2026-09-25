@@ -15,10 +15,29 @@ class AuthController extends Controller
      */
     public function sync(Request $request)
     {
+        // Self-registration can only ever create citizens or (pending) providers.
+        // Admin accounts are provisioned server-side, never through this endpoint.
+        $request->validate([
+            'role'             => 'nullable|in:citizen,provider',
+            'name'             => 'nullable|string|max:120',
+            'email'            => 'nullable|email|max:190',
+            'phone'            => 'nullable|string|max:20',
+            'service_type'     => 'nullable|in:advocate,mediator,arbitrator,notary,document-writer,tax-consultant',
+            'specialization'   => 'nullable|string|max:120',
+            'bar_council_id'   => 'nullable|string|max:60',
+            'location'         => 'nullable|string|max:120',
+            'experience'       => 'nullable|numeric|min:0|max:70',
+            'bio'              => 'nullable|string|max:2000',
+            'consultation_fee' => 'nullable|numeric|min:0|max:1000000',
+            'languages'        => 'nullable|array|max:20',
+            'services'         => 'nullable|array|max:30',
+            'qualifications'   => 'nullable|array|max:20',
+        ]);
+
         $uid   = $request->firebase_uid;
-        $role  = $request->input('role', $request->header('X-Mock-Role', 'citizen'));
-        $name  = $request->input('name', 'User');
-        $email = $request->input('email', '');
+        $role  = $request->input('role', 'citizen');
+        $email = $request->attributes->get('firebase_email') ?: $request->input('email', '');
+        $name  = trim((string) $request->input('name', '')) ?: (strstr($email, '@', true) ?: 'User');
         $phone = $request->input('phone', '');
 
         // Determine initial status
@@ -152,23 +171,26 @@ class AuthController extends Controller
                      ->where('role', 'admin')
                      ->first();
 
-        if (!$user) {
+        // Verify against a dummy hash when the account doesn't exist so response
+        // timing doesn't reveal which admin emails are registered.
+        $hash = $user->password_hash ?? '$2y$12$usesomesillystringfore7hnbRJHxXVLeakoG8K30oukPsA.ztMG';
+        if (!password_verify((string) $request->password, $hash) || !$user) {
             return response()->json(['error' => 'Invalid admin credentials'], 401);
         }
 
-        if (!password_verify($request->password, $user->password_hash)) {
-            return response()->json(['error' => 'Invalid admin credentials'], 401);
-        }
-
-        // Generate a simple token (in production, use proper JWT or Sanctum)
+        // Opaque random token. Only its hash is stored (see AdminAuthMiddleware).
         $token = bin2hex(random_bytes(32));
+        $ttl   = config('services.admin.token_ttl_hours', 12);
 
-        // Store the token on the user for later verification
-        $user->update(['admin_token' => $token]);
+        $user->update([
+            'admin_token'            => hash('sha256', $token),
+            'admin_token_expires_at' => now()->addHours($ttl)->toISOString(),
+        ]);
 
         return response()->json([
             'message' => 'Admin login successful',
             'token'   => $token,
+            'expires_in' => $ttl * 3600,
             'user'    => [
                 'id'     => (string) $user->_id,
                 'name'   => $user->name,
@@ -177,5 +199,14 @@ class AuthController extends Controller
                 'status' => 'active',
             ],
         ]);
+    }
+
+    /**
+     * POST /admin/logout — revokes the current admin session token.
+     */
+    public function adminLogout(Request $request)
+    {
+        $request->admin_user?->update(['admin_token' => null, 'admin_token_expires_at' => null]);
+        return response()->json(['message' => 'Signed out']);
     }
 }

@@ -1,6 +1,6 @@
 import { Link, useLocation } from 'react-router';
 import { useAuth } from '../../context/AuthContext';
-import { LayoutDashboard, Briefcase, IndianRupee, Award, UserCog, FileText, Clock, Users, UserCheck, Shield, Lock } from 'lucide-react';
+import { LayoutDashboard, Briefcase, IndianRupee, Award, UserCog, FileText, Clock, Users, UserCheck, Lock } from 'lucide-react';
 
 const providerLinks = [
   { to: '/provider/dashboard', label: 'Dashboard', icon: LayoutDashboard },

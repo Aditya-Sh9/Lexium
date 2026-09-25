@@ -1,13 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
-import { useAuth } from '../../context/AuthContext';
 import { TrendingUp, Download, IndianRupee, Lock, Search } from 'lucide-react';
 import api from '../../services/api';
 import { formatRupees } from '../../utils/formatters';
-
-const STATUS_STYLES = {
-  cleared: 'bg-green-100 text-green-700',
-  escrow:  'bg-amber-100 text-amber-800',
-};
 
 const STATUS_LABELS = {
   cleared: 'Cleared',
@@ -15,7 +9,6 @@ const STATUS_LABELS = {
 };
 
 export default function ProviderLedger() {
-  const { user } = useAuth();
   const [ledgerData, setLedgerData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');

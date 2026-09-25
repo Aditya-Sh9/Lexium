@@ -1,451 +1,598 @@
-import { useState, useEffect, useRef } from 'react';
-import { Link } from 'react-router';
+import { useEffect, useRef, useState } from 'react';
+import { Link, useNavigate } from 'react-router';
 import {
-  Shield,
-  Users,
-  CheckCircle,
-  ArrowRight,
-  Scale,
-  Briefcase,
-  FileCheck,
-  Award,
-  Star,
-  Gavel,
-  BookOpen,
-  Globe,
-  TrendingUp,
-  Clock,
-  Heart,
+  ArrowRight, BadgeCheck, Calculator, Check, ChevronDown, FileSignature, FileText, Gavel,
+  Handshake, IdCard, Landmark, Lock, Pause, Play, RotateCcw, Scale, Search, Stamp, Unlock,
 } from 'lucide-react';
-import { motion, useInView } from 'framer-motion';
+import { AnimatePresence, MotionConfig, motion, useInView, useReducedMotion } from 'framer-motion';
+import { categories, toCategoryId } from '../data/categories';
+import { getProviders } from '../services/providerService';
+import ProviderCard from '../components/ui/ProviderCard';
 
-const stats = [
-  { value: '500+', label: 'Verified Professionals', icon: Shield },
-  { value: '10,000+', label: 'Cases Handled', icon: Briefcase },
-  { value: '25+', label: 'Cities Covered', icon: Globe },
-  { value: '4.8', label: 'Average Rating', icon: Star },
+const EASE = [0.22, 1, 0.36, 1];
+
+const categoryIcons = {
+  advocate: Gavel,
+  mediator: Handshake,
+  arbitrator: Scale,
+  notary: Stamp,
+  'document-writer': FileSignature,
+  'tax-consultant': Calculator,
+};
+
+const pluralLabels = {
+  advocate: 'Advocates',
+  mediator: 'Mediators',
+  arbitrator: 'Arbitrators',
+  notary: 'Notaries',
+  'document-writer': 'Document Writers',
+  'tax-consultant': 'Tax Consultants',
+};
+
+const commonSearches = ['Property dispute', 'Divorce', 'GST filing', 'Affidavit', 'Rent agreement'];
+
+// Mirrors the petition status machine used by the backend.
+const caseStages = [
+  { id: 'pending', label: 'Filed', note: 'Request sent to the advocate' },
+  { id: 'under-review', label: 'Under review', note: 'Advocate accepted and is reviewing' },
+  { id: 'in-progress', label: 'In progress', note: 'Consultation held, work underway' },
+  { id: 'awaiting-documents', label: 'Awaiting documents', note: 'Sale deed copy requested' },
+  { id: 'resolved', label: 'Resolved', note: 'Title report delivered' },
 ];
 
-const howItWorks = [
-  {
-    icon: BookOpen,
-    title: 'Create Your Account',
-    description: 'Sign up as a citizen or legal professional. Get verified and gain access to our trusted network.',
-  },
-  {
-    icon: Scale,
-    title: 'Book a Consultation',
-    description: 'Browse verified providers in your dashboard. Select a convenient date and describe your case.',
-  },
-  {
-    icon: Shield,
-    title: 'Get Expert Help',
-    description: 'Connect with your legal professional securely. Get the guidance you need with full confidentiality.',
-  },
+const steps = [
+  { number: '01', title: 'Describe the matter', text: 'Search by issue, service, or city. You do not need to know which kind of professional you need yet.' },
+  { number: '02', title: 'Compare verified profiles', text: 'Read practice areas, years in practice, languages, reviews, and the consultation fee before you commit.' },
+  { number: '03', title: 'Book and follow the case', text: 'Pick a slot and share the essentials. Every status change is added to a timeline on your dashboard.' },
 ];
 
-const serviceCategories = [
-  { icon: Gavel, title: 'Advocates', desc: 'Expert legal representation in court', color: 'from-blue-500/10 to-blue-600/5' },
-  { icon: Scale, title: 'Mediators', desc: 'Resolve disputes without going to court', color: 'from-amber-500/10 to-amber-600/5' },
-  { icon: FileCheck, title: 'Notary Public', desc: 'Authenticate and certify documents', color: 'from-green-500/10 to-green-600/5' },
-  { icon: BookOpen, title: 'Document Writers', desc: 'Professional legal drafting services', color: 'from-purple-500/10 to-purple-600/5' },
-  { icon: TrendingUp, title: 'Tax Consultants', desc: 'Expert advice on tax compliance', color: 'from-rose-500/10 to-rose-600/5' },
-  { icon: Shield, title: 'Arbitrators', desc: 'Binding dispute resolution services', color: 'from-cyan-500/10 to-cyan-600/5' },
+const escrowStages = [
+  { icon: Check, title: 'Consultation completed', text: 'The provider marks your consultation as done.' },
+  { icon: Lock, title: 'Fee held in escrow', text: 'The fee is recorded against your case, not paid out.' },
+  { icon: Scale, title: 'Case resolved or closed', text: 'The matter reaches a final status on the timeline.' },
+  { icon: Unlock, title: 'Released by Lexium', text: 'Only then can an administrator release the payment.' },
 ];
 
-const testimonials = [
-  { name: 'Rahul M.', role: 'Business Owner', text: 'Lexium made it incredibly easy to find a corporate lawyer who understood our startup needs. Highly recommended!', rating: 5 },
-  { name: 'Sneha K.', role: 'Homeowner', text: 'I needed a notary urgently for my property documents. Found one within 30 minutes of signing up. Amazing service.', rating: 5 },
-  { name: 'Vikram S.', role: 'IT Professional', text: 'The mediation service helped resolve a long-standing dispute with my landlord. Saved us both time and money.', rating: 4 },
+const checks = [
+  { icon: IdCard, title: 'Government ID', text: 'Identity is matched against the name on the application.' },
+  { icon: Landmark, title: 'Enrolment number', text: 'Advocates submit their Bar Council enrolment for review.' },
+  { icon: FileText, title: 'Qualifications', text: 'Degrees and certificates are checked before approval.' },
+  { icon: BadgeCheck, title: 'Manual approval', text: 'A person reviews every application. Nobody is listed automatically.' },
 ];
 
-// Floating icon component for hero animation
-function FloatingIcon({ icon: Icon, delay, x, y, size = 20, color = 'text-primary-300/30' }) {
+const faqs = [
+  { q: 'Is Lexium a law firm?', a: 'No. Lexium is a marketplace. The advice comes from the independent professional you book, and your working relationship is with them.' },
+  { q: 'What does a consultation cost?', a: 'Each provider publishes their own consultation fee on their profile, so you see the price before you book. It is billed only after the consultation has taken place.' },
+  { q: 'What if something goes wrong with a provider?', a: 'Raise an issue from your dashboard. It is logged against the case, reviewed by the Lexium team, and the provider’s fee cannot be released while it is open.' },
+  { q: 'Can I use Lexium without an account?', a: 'You can search and read every profile without signing up. You need a free citizen account to book, so your case record has somewhere to live.' },
+];
+
+function Reveal({ children, delay = 0, className = '', as = 'div' }) {
+  const Component = motion[as];
   return (
-    <motion.div
+    <Component
       initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: [0, 1, 1, 0], y: [20, 0, -10, -20], x: [0, 5, -5, 0] }}
-      transition={{ duration: 6, delay, repeat: Infinity, repeatDelay: 2, ease: 'easeInOut' }}
-      className={`absolute ${color} pointer-events-none`}
-      style={{ left: x, top: y }}
-    >
-      <Icon size={size} />
-    </motion.div>
-  );
-}
-
-// Counter animation
-function AnimatedCounter({ value, suffix = '' }) {
-  const ref = useRef(null);
-  const isInView = useInView(ref, { once: true });
-  const [count, setCount] = useState(0);
-  const numericValue = parseInt(value.replace(/[^0-9]/g, ''));
-
-  useEffect(() => {
-    if (isInView) {
-      const duration = 2000;
-      const steps = 60;
-      const increment = numericValue / steps;
-      let current = 0;
-      const timer = setInterval(() => {
-        current += increment;
-        if (current >= numericValue) {
-          setCount(numericValue);
-          clearInterval(timer);
-        } else {
-          setCount(Math.floor(current));
-        }
-      }, duration / steps);
-      return () => clearInterval(timer);
-    }
-  }, [isInView, numericValue]);
-
-  return <span ref={ref}>{isInView ? `${count.toLocaleString()}${suffix}` : '0'}</span>;
-}
-
-// Section fade-in wrapper
-function FadeInSection({ children, delay = 0, className = '' }) {
-  const ref = useRef(null);
-  const isInView = useInView(ref, { once: true, margin: '-80px' });
-  return (
-    <motion.div
-      ref={ref}
-      initial={{ opacity: 0, y: 40 }}
-      animate={isInView ? { opacity: 1, y: 0 } : { opacity: 0, y: 40 }}
-      transition={{ duration: 0.7, delay, ease: [0.25, 0.1, 0.25, 1] }}
+      whileInView={{ opacity: 1, y: 0 }}
+      viewport={{ once: true, margin: '-60px' }}
+      transition={{ duration: 0.5, delay, ease: EASE }}
       className={className}
     >
       {children}
-    </motion.div>
+    </Component>
+  );
+}
+
+function SectionHeading({ eyebrow, title, children, action }) {
+  return (
+    <div className="flex flex-col justify-between gap-5 md:flex-row md:items-end">
+      <div className="max-w-2xl">
+        <p className="eyebrow">{eyebrow}</p>
+        <h2 className="mt-3 font-heading text-[34px] leading-[1.1] tracking-[-0.015em] text-primary-950 sm:text-[42px]" style={{ textWrap: 'balance' }}>
+          {title}
+        </h2>
+        {children && <p className="mt-4 max-w-xl text-base leading-7 text-surface-700">{children}</p>}
+      </div>
+      {action}
+    </div>
+  );
+}
+
+/* ── Hero: example case record that walks through the real status machine ── */
+function CaseRecord() {
+  const reduceMotion = useReducedMotion();
+  const [active, setActive] = useState(reduceMotion ? 2 : 0);
+  const [playing, setPlaying] = useState(!reduceMotion);
+  const [hovered, setHovered] = useState(false);
+  const last = caseStages.length - 1;
+  const done = active === last;
+
+  useEffect(() => {
+    if (!playing || hovered || done) return undefined;
+    const timer = setTimeout(() => setActive((i) => Math.min(i + 1, last)), active === 0 ? 1100 : 1800);
+    return () => clearTimeout(timer);
+  }, [active, playing, hovered, done, last]);
+
+  const toggle = () => {
+    if (done) {
+      setActive(0);
+      setPlaying(true);
+    } else {
+      setPlaying((p) => !p);
+    }
+  };
+
+  return (
+    <div
+      className="relative"
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+      onFocus={() => setHovered(true)}
+      onBlur={() => setHovered(false)}
+    >
+      <div aria-hidden="true" className="absolute inset-0 translate-x-3 translate-y-3 rounded-[10px] border border-[var(--hairline-strong)] bg-surface-100" />
+      <div className="lx-card relative overflow-hidden">
+        <div className="flex items-start justify-between gap-4 border-b border-[var(--hairline)] px-5 py-4 sm:px-6">
+          <div className="min-w-0">
+            <p className="label">Example case record</p>
+            <p className="mt-1.5 truncate font-heading text-[21px] text-primary-950">Property title review</p>
+            <p className="body-xs mt-0.5">Advocate · Pune · Filed 3 Sep</p>
+          </div>
+          <motion.span
+              key={caseStages[active].id}
+              initial={{ opacity: 0, y: -4 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.2 }}
+              className={`lx-badge shrink-0 ${done ? 'lx-badge-success' : 'lx-badge-info'}`}
+            >
+              <span className="lx-badge-dot" style={{ background: 'currentColor' }} />
+              {caseStages[active].label}
+            </motion.span>
+        </div>
+
+        <ol className="px-5 py-5 sm:px-6" aria-label="Case timeline">
+          {caseStages.map((stage, i) => {
+            const state = i < active ? 'past' : i === active ? 'current' : 'future';
+            return (
+              <li key={stage.id} className="relative flex gap-3.5 pb-4 last:pb-0" aria-current={state === 'current' ? 'step' : undefined}>
+                {i < last && (
+                  <span aria-hidden="true" className="absolute left-[9px] top-5 h-[calc(100%-12px)] w-px bg-surface-200">
+                    <motion.span
+                      className="absolute inset-0 origin-top bg-primary-700"
+                      initial={false}
+                      animate={{ scaleY: i < active ? 1 : 0 }}
+                      transition={{ duration: 0.45, ease: EASE }}
+                    />
+                  </span>
+                )}
+                <span
+                  aria-hidden="true"
+                  className={`relative mt-0.5 flex h-[19px] w-[19px] shrink-0 items-center justify-center rounded-full border transition-colors duration-300 ${
+                    state === 'future' ? 'border-surface-300 bg-white' : 'border-primary-800 bg-primary-800 text-white'
+                  }`}
+                >
+                  {state === 'past' && <Check size={11} strokeWidth={3} />}
+                  {state === 'current' && <span className="h-1.5 w-1.5 rounded-full bg-[var(--brass-light)]" />}
+                </span>
+                <div className="min-w-0">
+                  <p className={`text-sm font-medium transition-colors duration-300 ${state === 'future' ? 'text-surface-500' : 'text-surface-900'}`}>{stage.label}</p>
+                  <p className={`text-[13px] leading-5 transition-colors duration-300 ${state === 'future' ? 'text-surface-400' : 'text-surface-600'}`}>{stage.note}</p>
+                </div>
+              </li>
+            );
+          })}
+        </ol>
+
+        <div className="flex items-center justify-between gap-3 border-t border-[var(--hairline)] bg-surface-50 px-5 py-3.5 sm:px-6">
+          <div className="flex min-w-0 items-center gap-2.5 text-[13px]">
+            <motion.span
+                key={done ? 'released' : 'held'}
+                initial={{ opacity: 0, scale: 0.8 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ duration: 0.2 }}
+                className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full ${done ? 'bg-[var(--success-50)] text-[var(--success-600)]' : 'bg-[rgba(184,149,79,0.14)] text-[var(--brass-dark)]'}`}
+              >
+                {done ? <Unlock size={13} aria-hidden="true" /> : <Lock size={13} aria-hidden="true" />}
+              </motion.span>
+            <span className="min-w-0 truncate text-surface-700">
+              <span className="tabular font-semibold text-surface-900">₹1,500</span> fee {done ? 'can now be released' : 'held in escrow'}
+            </span>
+          </div>
+          <button
+            type="button"
+            onClick={toggle}
+            className="lx-btn lx-btn-ghost lx-btn-sm shrink-0"
+            aria-label={done ? 'Replay example' : playing ? 'Pause example' : 'Play example'}
+          >
+            {done ? <RotateCcw size={13} /> : playing ? <Pause size={13} /> : <Play size={13} />}
+            <span className="hidden sm:inline">{done ? 'Replay' : playing ? 'Pause' : 'Play'}</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ── Escrow flow: connector draws in as the section enters the viewport ── */
+function EscrowFlow() {
+  const ref = useRef(null);
+  const inView = useInView(ref, { once: true, margin: '-100px' });
+
+  return (
+    <div ref={ref} className="relative mt-12">
+      <div aria-hidden="true" className="absolute bottom-5 left-[19px] top-5 w-px bg-white/10 lg:hidden">
+        <motion.div
+          className="absolute inset-0 origin-top bg-[var(--brass)]"
+          initial={{ scaleY: 0 }}
+          animate={inView ? { scaleY: 1 } : {}}
+          transition={{ duration: 1.2, ease: EASE, delay: 0.1 }}
+        />
+      </div>
+      <div aria-hidden="true" className="absolute left-5 right-5 top-5 hidden h-px bg-white/10 lg:block">
+        <motion.div
+          className="absolute inset-0 origin-left bg-[var(--brass)]"
+          initial={{ scaleX: 0 }}
+          animate={inView ? { scaleX: 1 } : {}}
+          transition={{ duration: 1.2, ease: EASE, delay: 0.1 }}
+        />
+      </div>
+      <ol className="relative grid gap-8 lg:grid-cols-4 lg:gap-6">
+        {escrowStages.map((stage, i) => {
+          const Icon = stage.icon;
+          return (
+            <motion.li
+              key={stage.title}
+              initial={{ opacity: 0, y: 12 }}
+              animate={inView ? { opacity: 1, y: 0 } : {}}
+              transition={{ duration: 0.45, delay: 0.15 + i * 0.22, ease: EASE }}
+              className="flex gap-4 lg:flex-col"
+            >
+              <span className="relative flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-white/15 bg-primary-900 text-[var(--brass-light)]">
+                <Icon size={17} aria-hidden="true" />
+              </span>
+              <div>
+                <p className="mono text-[11px] text-white/70">Step {i + 1}</p>
+                <h3 className="mt-1 font-heading text-xl text-white">{stage.title}</h3>
+                <p className="mt-1.5 max-w-[260px] text-sm leading-6 text-white/75">{stage.text}</p>
+              </div>
+            </motion.li>
+          );
+        })}
+      </ol>
+    </div>
+  );
+}
+
+function FeaturedProviders({ providers, status }) {
+  if (status === 'loading') {
+    return (
+      <div className="mt-10 grid gap-4 md:grid-cols-2 lg:grid-cols-3" aria-busy="true" aria-label="Loading providers">
+        {[0, 1, 2].map((i) => (
+          <div key={i} className="lx-card h-[178px] animate-pulse p-[18px]">
+            <div className="flex gap-3">
+              <div className="h-14 w-14 rounded-full bg-surface-100" />
+              <div className="flex-1 space-y-2 pt-1">
+                <div className="h-3.5 w-2/3 rounded bg-surface-100" />
+                <div className="h-3 w-1/2 rounded bg-surface-100" />
+                <div className="h-3 w-3/4 rounded bg-surface-100" />
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+    );
+  }
+
+  if (status === 'error' || providers.length === 0) {
+    return (
+      <div className="lx-card lx-card-flat mt-10 flex flex-col items-start gap-4 p-6 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <p className="lx-h3">{status === 'error' ? 'We couldn’t load profiles just now.' : 'New profiles are being reviewed.'}</p>
+          <p className="body-sm mt-1">{status === 'error' ? 'The registry is still available. Try opening it directly.' : 'Approved providers appear here as soon as they are verified.'}</p>
+        </div>
+        <Link to="/providers" className="lx-btn lx-btn-secondary">Open the registry <ArrowRight size={14} /></Link>
+      </div>
+    );
+  }
+
+  return (
+    <div className="mt-10 grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+      {providers.map((provider, i) => (
+        <Reveal key={provider._id || provider.id} delay={i * 0.06}>
+          <ProviderCard provider={provider} />
+        </Reveal>
+      ))}
+    </div>
+  );
+}
+
+function Faq() {
+  const [open, setOpen] = useState(0);
+  return (
+    <div className="divide-y divide-[var(--hairline-strong)] border-y border-[var(--hairline-strong)]">
+      {faqs.map((item, i) => {
+        const isOpen = open === i;
+        const id = `faq-${i}`;
+        return (
+          <div key={item.q}>
+            <h3>
+              <button
+                type="button"
+                id={`${id}-trigger`}
+                aria-expanded={isOpen}
+                aria-controls={`${id}-panel`}
+                onClick={() => setOpen(isOpen ? -1 : i)}
+                className="flex w-full cursor-pointer items-center justify-between gap-6 py-5 text-left font-heading text-xl text-primary-950 transition-colors hover:text-primary-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-400"
+              >
+                {item.q}
+                <ChevronDown size={18} aria-hidden="true" className={`shrink-0 text-surface-500 transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`} />
+              </button>
+            </h3>
+            <AnimatePresence initial={false}>
+              {isOpen && (
+                <motion.div
+                  id={`${id}-panel`}
+                  role="region"
+                  aria-labelledby={`${id}-trigger`}
+                  initial={{ height: 0, opacity: 0 }}
+                  animate={{ height: 'auto', opacity: 1 }}
+                  exit={{ height: 0, opacity: 0 }}
+                  transition={{ duration: 0.22, ease: EASE }}
+                  className="overflow-hidden"
+                >
+                  <p className="max-w-2xl pb-5 text-[15px] leading-7 text-surface-700">{item.a}</p>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
+        );
+      })}
+    </div>
   );
 }
 
 export default function Home() {
+  const navigate = useNavigate();
+  const [search, setSearch] = useState('');
+  const [providers, setProviders] = useState([]);
+  const [status, setStatus] = useState('loading');
+
+  useEffect(() => {
+    let cancelled = false;
+    getProviders({ sortBy: 'rating' })
+      .then((list) => {
+        if (cancelled) return;
+        setProviders(Array.isArray(list) ? list : []);
+        setStatus('ready');
+      })
+      .catch(() => !cancelled && setStatus('error'));
+    return () => { cancelled = true; };
+  }, []);
+
+  const countFor = (id) => providers.filter((p) => toCategoryId(p.service_type || p.category) === id).length;
+  const featured = providers.slice(0, 3);
+
+  const submitSearch = (event) => {
+    event.preventDefault();
+    const value = search.trim();
+    navigate(value ? `/providers?search=${encodeURIComponent(value)}` : '/providers');
+  };
+
   return (
-    <div>
-      {/* ───── Hero Section ───── */}
-      <header className="relative pt-40 pb-32 px-4 sm:px-6 lg:px-8 min-h-[95vh] flex flex-col items-center justify-center text-center overflow-hidden">
-        {/* Floating legal icons */}
-        <FloatingIcon icon={Scale} delay={0} x="10%" y="20%" size={32} color="text-primary-300/20" />
-        <FloatingIcon icon={Gavel} delay={1} x="85%" y="15%" size={28} color="text-accent-300/20" />
-        <FloatingIcon icon={BookOpen} delay={2} x="15%" y="70%" size={24} color="text-accent-300/15" />
-        <FloatingIcon icon={Shield} delay={0.5} x="80%" y="65%" size={30} color="text-primary-300/15" />
-        <FloatingIcon icon={FileCheck} delay={1.5} x="70%" y="35%" size={22} color="text-accent-300/20" />
-        <FloatingIcon icon={Star} delay={3} x="25%" y="40%" size={18} color="text-accent-300/25" />
-
-        <div className="relative z-10 max-w-[1280px] mx-auto flex flex-col items-center">
-          {/* Animated trust pill */}
-          <motion.div
-            initial={{ opacity: 0, scale: 0.9 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ duration: 0.5 }}
-            className="inline-flex items-center gap-2 px-5 py-2 rounded-full bg-white/40 backdrop-blur-md border border-white/60 text-primary-900 text-sm mb-8 font-sans"
-          >
-            <Shield size={14} className="text-primary-900" />
-            India's Trusted Legal Services Marketplace
-          </motion.div>
-
-          <motion.h1
-            initial={{ opacity: 0, y: 30 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8, delay: 0.2, ease: [0.25, 0.1, 0.25, 1] }}
-            className="font-heading text-4xl sm:text-5xl lg:text-7xl text-primary-900 max-w-5xl mb-6 leading-tight"
-          >
-            Justice Made{' '}
-            <span className="relative inline-block">
-              <span className="text-transparent bg-clip-text brass-gradient">Accessible</span>
-              <motion.span
-                initial={{ scaleX: 0 }}
-                animate={{ scaleX: 1 }}
-                transition={{ duration: 0.8, delay: 1 }}
-                className="absolute -bottom-2 left-0 right-0 h-1 bg-gradient-to-r from-transparent via-[#D4AF37] to-transparent origin-left"
-              />
-            </span>
-            {' '}for All
-          </motion.h1>
-
-          <motion.p
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, delay: 0.4 }}
-            className="font-sans text-lg sm:text-xl text-surface-700 max-w-2xl mx-auto mb-12 leading-relaxed"
-          >
-            Connect with verified advocates, mediators, notaries, and legal experts. Sign up to book appointments, compare services, and get the legal help you need — all in one place.
-          </motion.p>
-
-          {/* CTA Buttons */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, delay: 0.6 }}
-            className="flex flex-wrap gap-4 justify-center mb-16"
-          >
-            <Link
-              to="/register"
-              className="group relative inline-flex items-center gap-3 px-8 py-4 bg-primary-800 text-white font-sans text-sm uppercase tracking-widest font-bold rounded-xl hover:bg-primary-900 transition-all shadow-lg hover:shadow-xl border border-accent-300/30 overflow-hidden"
-            >
-              <span className="relative z-10">Get Started Free</span>
-              <ArrowRight size={18} className="relative z-10 group-hover:translate-x-1 transition-transform" />
-              <div className="absolute inset-0 bg-gradient-to-r from-primary-900 to-primary-800 opacity-0 group-hover:opacity-100 transition-opacity" />
-            </Link>
-            <Link
-              to="/login"
-              className="inline-flex items-center gap-3 px-8 py-4 bg-white/70 backdrop-blur-sm text-primary-800 font-sans text-sm uppercase tracking-widest font-bold rounded-xl hover:bg-white transition-all border border-surface-200 shadow-sm hover:shadow-md"
-            >
-              Sign In
-            </Link>
-          </motion.div>
-
-          {/* Animated Stats */}
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ duration: 0.8, delay: 0.8 }}
-            className="grid grid-cols-2 md:grid-cols-4 gap-6 md:gap-12"
-          >
-            {stats.map((stat, i) => {
-              const Icon = stat.icon;
-              return (
-                <motion.div
-                  key={stat.label}
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.9 + i * 0.1 }}
-                  className="text-center group"
-                >
-                  <div className="flex items-center justify-center gap-2 mb-1">
-                    <Icon size={18} className="text-accent-300 group-hover:scale-110 transition-transform" />
-                    <div className="text-3xl font-heading font-bold text-primary-900">
-                      {stat.value.includes('.') ? stat.value : (
-                        <AnimatedCounter value={stat.value} suffix={stat.value.includes('+') ? '+' : ''} />
-                      )}
-                    </div>
-                  </div>
-                  <div className="text-sm font-sans text-surface-600 uppercase tracking-wider">{stat.label}</div>
-                </motion.div>
-              );
-            })}
-          </motion.div>
-        </div>
-
-        {/* Scroll indicator */}
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 2 }}
-          className="absolute bottom-8 left-1/2 -translate-x-1/2"
-        >
-          <motion.div
-            animate={{ y: [0, 8, 0] }}
-            transition={{ duration: 1.5, repeat: Infinity }}
-            className="w-6 h-10 border-2 border-surface-300 rounded-full flex items-start justify-center pt-2"
-          >
-            <div className="w-1.5 h-1.5 bg-surface-400 rounded-full" />
-          </motion.div>
-        </motion.div>
-      </header>
-
-      {/* ───── Service Categories ───── */}
-      <section className="py-24 px-4 sm:px-6 lg:px-8 bg-surface-50/60 backdrop-blur-sm relative z-10">
-        <div className="max-w-[1280px] mx-auto">
-          <FadeInSection>
-            <div className="text-center mb-16">
-              <span className="font-sans text-xs uppercase tracking-[0.2em] font-bold text-accent-400 mb-4 block">Our Services</span>
-              <h2 className="font-heading text-4xl text-primary-900 mb-4">
-                Legal Services for Every Need
-              </h2>
-              <p className="font-sans text-lg text-surface-700 max-w-2xl mx-auto">
-                From courtroom representation to document authentication — find the right professional for your legal needs.
+    <MotionConfig reducedMotion="user">
+      <div className="overflow-x-clip">
+        {/* ── Hero ─────────────────────────────────────────────── */}
+        <section className="relative px-5 pb-20 pt-14 sm:px-8 lg:px-12 lg:pb-28 lg:pt-20">
+          <div className="mx-auto grid max-w-[1200px] items-center gap-14 lg:grid-cols-[1.1fr_0.9fr] lg:gap-20">
+            <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6, ease: EASE }}>
+              <p className="eyebrow flex items-center gap-3"><span aria-hidden="true" className="h-px w-8 bg-[var(--brass)]" /> Verified legal help, India</p>
+              <h1 className="mt-6 max-w-[640px] font-heading text-[44px] leading-[1.02] tracking-[-0.025em] text-primary-950 sm:text-6xl lg:text-[68px]" style={{ textWrap: 'balance' }}>
+                Find the right lawyer, and see every step of your case.
+              </h1>
+              <p className="mt-6 max-w-[540px] text-[17px] leading-7 text-surface-700">
+                Every professional on Lexium is checked by a person before they are listed. Fees are published up front and held in escrow until your matter is resolved.
               </p>
-            </div>
-          </FadeInSection>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-            {serviceCategories.map((cat, i) => {
-              const Icon = cat.icon;
-              return (
-                <FadeInSection key={cat.title} delay={i * 0.08}>
-                  <div className="group bg-white/80 backdrop-blur-md rounded-2xl p-7 border border-surface-200/80 shadow-sm hover:shadow-lg hover:border-accent-300/50 transition-all duration-300 cursor-default">
-                    <div className={`w-14 h-14 rounded-xl bg-gradient-to-br ${cat.color} flex items-center justify-center mb-5 group-hover:scale-110 transition-transform`}>
-                      <Icon size={26} className="text-primary-800" />
-                    </div>
-                    <h3 className="font-heading text-xl text-primary-900 mb-2">{cat.title}</h3>
-                    <p className="font-sans text-surface-600 text-sm leading-relaxed">{cat.desc}</p>
-                  </div>
-                </FadeInSection>
-              );
-            })}
-          </div>
-        </div>
-      </section>
-
-      {/* ───── How It Works ───── */}
-      <section className="bg-white/80 backdrop-blur-md border-y border-surface-200/50 py-24 px-4 sm:px-6 lg:px-8 relative z-10">
-        <div className="max-w-[1280px] mx-auto">
-          <FadeInSection>
-            <div className="text-center mb-16">
-              <span className="font-sans text-xs uppercase tracking-[0.2em] font-bold text-accent-400 mb-4 block">Simple Process</span>
-              <h2 className="font-heading text-4xl text-primary-900 mb-4">
-                How It Works
-              </h2>
-              <p className="font-sans text-lg text-surface-700 max-w-2xl mx-auto">
-                Getting legal help has never been easier. Three simple steps to connect with the right professional.
-              </p>
-            </div>
-          </FadeInSection>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-12 relative">
-            {/* Connecting line */}
-            <div className="hidden md:block absolute top-16 left-[15%] right-[15%] h-[2px] bg-gradient-to-r from-transparent via-[#D4AF37]/40 to-transparent z-0" />
-
-            {howItWorks.map((step, i) => {
-              const Icon = step.icon;
-              return (
-                <FadeInSection key={step.title} delay={i * 0.15}>
-                  <div className="text-center group relative z-10">
-                    <div className="relative inline-flex mb-8">
-                      <motion.div
-                        whileHover={{ scale: 1.08, rotate: 3 }}
-                        className="w-28 h-28 rounded-2xl bg-white border border-[#D4AF37]/20 shadow-[0_20px_40px_-5px_rgba(0,35,102,0.06)] flex items-center justify-center"
-                      >
-                        <Icon size={36} className="text-primary-900" />
-                      </motion.div>
-                      <span className="absolute -top-3 -right-3 w-9 h-9 bg-[#D4AF37] text-white text-sm font-bold rounded-full flex items-center justify-center shadow-lg">
-                        {i + 1}
-                      </span>
-                    </div>
-                    <h3 className="font-heading font-semibold text-2xl text-primary-900 mb-4">
-                      {step.title}
-                    </h3>
-                    <p className="font-sans text-surface-600 leading-relaxed max-w-sm mx-auto">{step.description}</p>
-                  </div>
-                </FadeInSection>
-              );
-            })}
-          </div>
-        </div>
-      </section>
-
-      {/* ───── Testimonials ───── */}
-      <section className="py-24 px-4 sm:px-6 lg:px-8 bg-surface-50/60 backdrop-blur-sm relative z-10">
-        <div className="max-w-[1280px] mx-auto">
-          <FadeInSection>
-            <div className="text-center mb-16">
-              <span className="font-sans text-xs uppercase tracking-[0.2em] font-bold text-accent-400 mb-4 block">Testimonials</span>
-              <h2 className="font-heading text-4xl text-primary-900 mb-4">
-                What Our Users Say
-              </h2>
-              <p className="font-sans text-lg text-surface-700 max-w-2xl mx-auto">
-                Real experiences from citizens and professionals who trust Lexium.
-              </p>
-            </div>
-          </FadeInSection>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            {testimonials.map((t, i) => (
-              <FadeInSection key={t.name} delay={i * 0.1}>
-                <div className="bg-white/90 backdrop-blur-md rounded-2xl p-8 border border-surface-200/80 shadow-sm hover:shadow-md transition-all relative">
-                  <div className="absolute top-6 right-6 text-accent-300/20">
-                    <svg width="36" height="36" viewBox="0 0 24 24" fill="currentColor"><path d="M14.017 21v-7.391c0-5.704 3.731-9.57 8.983-10.609l.995 2.151c-2.432.917-3.995 3.638-3.995 5.849h4v10h-9.983zm-14.017 0v-7.391c0-5.704 3.748-9.57 9-10.609l.996 2.151c-2.433.917-3.996 3.638-3.996 5.849h3.983v10h-9.983z"/></svg>
-                  </div>
-                  <div className="flex gap-0.5 mb-4">
-                    {Array.from({ length: t.rating }).map((_, j) => (
-                      <Star key={j} size={16} className="text-accent-300 fill-accent-300" />
-                    ))}
-                  </div>
-                  <p className="font-sans text-surface-700 leading-relaxed mb-6 text-[15px]">"{t.text}"</p>
-                  <div className="flex items-center gap-3 pt-4 border-t border-surface-100">
-                    <div className="w-10 h-10 rounded-full bg-primary-100 text-primary-800 flex items-center justify-center font-heading text-sm font-bold">
-                      {t.name.charAt(0)}
-                    </div>
-                    <div>
-                      <p className="font-sans text-sm font-semibold text-surface-900">{t.name}</p>
-                      <p className="font-sans text-xs text-surface-500">{t.role}</p>
-                    </div>
-                  </div>
+              <form onSubmit={submitSearch} className="mt-9 flex max-w-[580px] flex-col gap-3 sm:flex-row" role="search">
+                <label htmlFor="home-search" className="sr-only">What do you need help with?</label>
+                <div className="relative min-w-0 flex-1">
+                  <Search size={18} aria-hidden="true" className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-surface-500" />
+                  <input
+                    id="home-search"
+                    type="search"
+                    value={search}
+                    onChange={(e) => setSearch(e.target.value)}
+                    placeholder="An issue, a service, or a city"
+                    autoComplete="off"
+                    className="h-[52px] w-full rounded-lg border border-surface-300 bg-white pl-11 pr-4 text-base text-surface-900 shadow-[var(--shadow-sm)] outline-none transition placeholder:text-surface-500 focus:border-primary-600 focus:ring-4 focus:ring-primary-600/10"
+                  />
                 </div>
-              </FadeInSection>
-            ))}
-          </div>
-        </div>
-      </section>
+                <button type="submit" className="lx-btn lx-btn-primary h-[52px] shrink-0 px-6 text-[14px]">
+                  Search <ArrowRight size={16} aria-hidden="true" />
+                </button>
+              </form>
 
-      {/* ───── Platform Benefits ───── */}
-      <section className="bg-white/80 backdrop-blur-md border-y border-surface-200/50 py-24 px-4 sm:px-6 lg:px-8 relative z-10">
-        <div className="max-w-[1280px] mx-auto">
-          <FadeInSection>
-            <div className="text-center mb-16">
-              <span className="font-sans text-xs uppercase tracking-[0.2em] font-bold text-accent-400 mb-4 block">Why Lexium</span>
-              <h2 className="font-heading text-4xl text-primary-900 mb-4">Built on Trust & Transparency</h2>
-            </div>
-          </FadeInSection>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
-            {[
-              { icon: Shield, title: 'Verified Providers', desc: 'Every professional goes through a rigorous verification process' },
-              { icon: Clock, title: 'Quick Booking', desc: 'Book appointments in minutes, not days. Get help when you need it' },
-              { icon: Heart, title: 'Transparent Pricing', desc: 'Clear pricing upfront. No hidden charges or surprises' },
-              { icon: Award, title: 'Incentive-Based', desc: 'Providers earn badges and rewards for exceptional service' },
-            ].map((b, i) => {
-              const Icon = b.icon;
-              return (
-                <FadeInSection key={b.title} delay={i * 0.1}>
-                  <motion.div
-                    whileHover={{ y: -4 }}
-                    className="text-center p-6"
+              <div className="mt-5 flex flex-wrap items-center gap-2">
+                <span className="mr-1 text-[13px] text-surface-600">Common:</span>
+                {commonSearches.map((term) => (
+                  <Link
+                    key={term}
+                    to={`/providers?search=${encodeURIComponent(term)}`}
+                    className="inline-flex h-8 items-center rounded-full border border-[var(--hairline-strong)] bg-white/70 px-3 text-[13px] text-surface-700 transition-colors hover:border-surface-400 hover:bg-white hover:text-primary-900"
                   >
-                    <div className="w-16 h-16 rounded-2xl bg-primary-50 text-primary-800 flex items-center justify-center mx-auto mb-5">
-                      <Icon size={28} />
-                    </div>
-                    <h3 className="font-heading text-lg text-primary-900 mb-2">{b.title}</h3>
-                    <p className="font-sans text-sm text-surface-600 leading-relaxed">{b.desc}</p>
-                  </motion.div>
-                </FadeInSection>
-              );
-            })}
-          </div>
-        </div>
-      </section>
-
-      {/* ───── CTA — Join as Provider ───── */}
-      <section className="bg-primary-900 relative z-10 overflow-hidden">
-        <div className="absolute inset-0 bg-arch-pattern opacity-10" />
-        
-        {/* Floating decorative elements */}
-        <motion.div animate={{ rotate: 360 }} transition={{ duration: 60, repeat: Infinity, ease: 'linear' }}
-          className="absolute top-10 right-10 w-40 h-40 border border-white/5 rounded-full" />
-        <motion.div animate={{ rotate: -360 }} transition={{ duration: 80, repeat: Infinity, ease: 'linear' }}
-          className="absolute bottom-10 left-10 w-60 h-60 border border-white/5 rounded-full" />
-        
-        <div className="max-w-[1280px] mx-auto px-4 sm:px-6 lg:px-8 py-24 relative z-10">
-          <FadeInSection>
-            <div className="flex flex-col lg:flex-row items-center gap-12 bg-white/5 backdrop-blur-md border border-white/10 p-12 rounded-2xl shadow-2xl">
-              <div className="flex-1 text-center lg:text-left">
-                <h2 className="font-heading text-4xl text-white mb-6">
-                  Are You a Legal Professional?
-                </h2>
-                <p className="font-sans text-xl text-surface-200 mb-8 max-w-2xl">
-                  Join India's fastest-growing legal marketplace. Get more clients, earn rewards, and grow your practice with our incentive-based platform.
-                </p>
-                <div className="flex flex-wrap gap-6 justify-center lg:justify-start text-surface-200 text-sm font-sans">
-                  <span className="flex items-center gap-2"><CheckCircle size={18} className="text-[#D4AF37]" /> Free Registration</span>
-                  <span className="flex items-center gap-2"><Award size={18} className="text-[#D4AF37]" /> Earn Badges & Rewards</span>
-                  <span className="flex items-center gap-2"><Users size={18} className="text-[#D4AF37]" /> Access to 10,000+ Clients</span>
-                </div>
+                    {term}
+                  </Link>
+                ))}
               </div>
-              <div className="shrink-0">
-                <Link
-                  to="/register"
-                  className="group inline-flex items-center gap-3 px-8 py-4 bg-[#D4AF37] text-primary-900 font-bold font-sans text-lg rounded-xl hover:bg-white transition-colors shadow-lg uppercase tracking-wider"
-                >
-                  Register as Provider
-                  <ArrowRight size={20} className="group-hover:translate-x-1 transition-transform" />
+            </motion.div>
+
+            <motion.div initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.65, delay: 0.12, ease: EASE }} className="mx-auto w-full max-w-[460px] lg:max-w-none">
+              <CaseRecord />
+            </motion.div>
+          </div>
+        </section>
+
+        {/* ── Practice areas ───────────────────────────────────── */}
+        <section id="practice-areas" className="scroll-mt-20 border-y border-[var(--hairline)] bg-white px-5 py-20 sm:px-8 lg:px-12">
+          <div className="mx-auto max-w-[1200px]">
+            <Reveal>
+              <SectionHeading
+                eyebrow="Practice areas"
+                title="Start with the kind of help you need."
+                action={<Link to="/providers" className="lx-btn lx-btn-secondary w-max">All providers <ArrowRight size={14} aria-hidden="true" /></Link>}
+              />
+            </Reveal>
+            <ul className="mt-12 grid border-l border-t border-[var(--hairline-strong)] sm:grid-cols-2 lg:grid-cols-3">
+              {categories.map((category, i) => {
+                const Icon = categoryIcons[category.id] || FileText;
+                const count = countFor(category.id);
+                return (
+                  <Reveal as="li" key={category.id} delay={i * 0.04} className="border-b border-r border-[var(--hairline-strong)]">
+                    <Link
+                      to={`/providers?category=${category.id}`}
+                      className="group flex h-full min-h-[180px] flex-col justify-between gap-6 p-6 transition-colors hover:bg-surface-50 focus-visible:bg-surface-50"
+                    >
+                      <div className="flex items-start justify-between">
+                        <Icon size={22} strokeWidth={1.6} aria-hidden="true" className="text-primary-800" />
+                        <ArrowRight size={16} aria-hidden="true" className="-translate-x-1 text-surface-400 opacity-0 transition-all duration-200 group-hover:translate-x-0 group-hover:text-primary-800 group-hover:opacity-100" />
+                      </div>
+                      <div>
+                        <div className="flex items-baseline justify-between gap-3">
+                          <h3 className="font-heading text-[22px] text-primary-950">{pluralLabels[category.id] || category.name}</h3>
+                          {status === 'ready' && count > 0 && (
+                            <span className="tabular shrink-0 text-xs text-surface-600">{count} listed</span>
+                          )}
+                        </div>
+                        <p className="mt-1.5 text-sm leading-6 text-surface-600">{category.description}</p>
+                      </div>
+                    </Link>
+                  </Reveal>
+                );
+              })}
+            </ul>
+          </div>
+        </section>
+
+        {/* ── How it works ─────────────────────────────────────── */}
+        <section id="how-it-works" className="scroll-mt-20 px-5 py-20 sm:px-8 lg:px-12 lg:py-28">
+          <div className="mx-auto grid max-w-[1200px] gap-12 lg:grid-cols-[0.8fr_1.2fr] lg:gap-24">
+            <Reveal>
+              <SectionHeading eyebrow="How it works" title="From first question to a closed case.">
+                A booking creates a case record, not just a calendar slot. Documents, updates, and outcomes stay attached to it.
+              </SectionHeading>
+              <Link to="/about" className="group mt-7 inline-flex items-center gap-2 text-sm font-semibold text-primary-800 hover:text-primary-600">
+                Read the full process <ArrowRight size={15} aria-hidden="true" className="transition-transform group-hover:translate-x-1" />
+              </Link>
+            </Reveal>
+            <ol className="border-t border-[var(--hairline-strong)]">
+              {steps.map((step, i) => (
+                <Reveal as="li" key={step.number} delay={i * 0.08} className="grid gap-3 border-b border-[var(--hairline-strong)] py-8 sm:grid-cols-[64px_1fr]">
+                  <span className="mono text-sm text-[var(--brass-dark)]">{step.number}</span>
+                  <div>
+                    <h3 className="font-heading text-2xl text-primary-950">{step.title}</h3>
+                    <p className="mt-2 max-w-md text-[15px] leading-7 text-surface-700">{step.text}</p>
+                  </div>
+                </Reveal>
+              ))}
+            </ol>
+          </div>
+        </section>
+
+        {/* ── Escrow ───────────────────────────────────────────── */}
+        <section id="escrow" className="scroll-mt-20 bg-primary-950 px-5 py-20 text-white sm:px-8 lg:px-12 lg:py-24">
+          <div className="mx-auto max-w-[1200px]">
+            <Reveal>
+              <p className="eyebrow" style={{ color: 'var(--brass-light)' }}>Escrow</p>
+              <h2 className="mt-3 max-w-2xl font-heading text-[34px] leading-[1.1] tracking-[-0.015em] sm:text-[42px]" style={{ textWrap: 'balance' }}>
+                Your fee isn’t paid out until your case is finished.
+              </h2>
+              <p className="mt-4 max-w-xl text-base leading-7 text-white/75">
+                Payments are released against the case record, so the professional you hired has a reason to see the matter through.
+              </p>
+            </Reveal>
+            <EscrowFlow />
+          </div>
+        </section>
+
+        {/* ── Featured providers ───────────────────────────────── */}
+        <section className="px-5 py-20 sm:px-8 lg:px-12 lg:py-24">
+          <div className="mx-auto max-w-[1200px]">
+            <Reveal>
+              <SectionHeading
+                eyebrow="On the registry"
+                title="Highest-rated professionals right now."
+                action={<Link to="/providers" className="lx-btn lx-btn-secondary w-max">Browse everyone <ArrowRight size={14} aria-hidden="true" /></Link>}
+              />
+            </Reveal>
+            <FeaturedProviders providers={featured} status={status} />
+          </div>
+        </section>
+
+        {/* ── Verification ─────────────────────────────────────── */}
+        <section id="verification" className="scroll-mt-20 border-y border-[var(--hairline)] bg-white px-5 py-20 sm:px-8 lg:px-12">
+          <div className="mx-auto grid max-w-[1200px] gap-12 lg:grid-cols-[0.8fr_1.2fr] lg:gap-24">
+            <Reveal>
+              <SectionHeading eyebrow="Verification" title="What we check before anyone is listed.">
+                Applications that fail any of these are declined with a reason. Listed profiles carry a verified mark.
+              </SectionHeading>
+              <Link to="/guidelines" className="group mt-7 inline-flex items-center gap-2 text-sm font-semibold text-primary-800 hover:text-primary-600">
+                Provider standards <ArrowRight size={15} aria-hidden="true" className="transition-transform group-hover:translate-x-1" />
+              </Link>
+            </Reveal>
+            <ul className="grid gap-x-10 gap-y-8 sm:grid-cols-2">
+              {checks.map((item, i) => {
+                const Icon = item.icon;
+                return (
+                  <Reveal as="li" key={item.title} delay={i * 0.06} className="flex gap-4">
+                    <Icon size={20} strokeWidth={1.6} aria-hidden="true" className="mt-1 shrink-0 text-[var(--brass-dark)]" />
+                    <div>
+                      <h3 className="lx-h3">{item.title}</h3>
+                      <p className="mt-1 text-sm leading-6 text-surface-600">{item.text}</p>
+                    </div>
+                  </Reveal>
+                );
+              })}
+            </ul>
+          </div>
+        </section>
+
+        {/* ── FAQ ──────────────────────────────────────────────── */}
+        <section id="faq" className="scroll-mt-20 px-5 py-20 sm:px-8 lg:px-12 lg:py-24">
+          <div className="mx-auto grid max-w-[1200px] gap-12 lg:grid-cols-[0.8fr_1.2fr] lg:gap-24">
+            <Reveal>
+              <SectionHeading eyebrow="Questions" title="Before you book.">
+                Straight answers to what people ask most.
+              </SectionHeading>
+              <Link to="/help" className="group mt-7 inline-flex items-center gap-2 text-sm font-semibold text-primary-800 hover:text-primary-600">
+                Visit the help centre <ArrowRight size={15} aria-hidden="true" className="transition-transform group-hover:translate-x-1" />
+              </Link>
+            </Reveal>
+            <Reveal delay={0.08}><Faq /></Reveal>
+          </div>
+        </section>
+
+        {/* ── For professionals ───────────────────────────────── */}
+        <section className="px-5 pb-20 sm:px-8 lg:px-12">
+          <Reveal className="mx-auto max-w-[1200px]">
+            <div className="grid gap-8 rounded-[10px] border border-[var(--hairline-strong)] bg-surface-100 p-8 sm:p-10 lg:grid-cols-[1fr_auto] lg:items-center lg:p-12">
+              <div>
+                <p className="eyebrow">For legal professionals</p>
+                <h2 className="mt-3 max-w-2xl font-heading text-3xl leading-tight text-primary-950 sm:text-[38px]" style={{ textWrap: 'balance' }}>
+                  Take on clients who arrive with the facts already written down.
+                </h2>
+                <p className="mt-4 max-w-xl text-[15px] leading-7 text-surface-700">
+                  Apply once, get verified, and manage your docket, consultations, and ledger from one workspace.
+                </p>
+              </div>
+              <div className="flex flex-col gap-3 sm:flex-row lg:flex-col">
+                <Link to="/register?role=provider" className="lx-btn lx-btn-primary lx-btn-lg">
+                  Apply to join <ArrowRight size={15} aria-hidden="true" />
                 </Link>
+                <Link to="/login" className="lx-btn lx-btn-secondary lx-btn-lg">Provider sign in</Link>
               </div>
             </div>
-          </FadeInSection>
-        </div>
-      </section>
-    </div>
+          </Reveal>
+        </section>
+      </div>
+    </MotionConfig>
   );
 }

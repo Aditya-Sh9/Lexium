@@ -16,7 +16,11 @@ return [
 
     'allowed_methods' => ['*'],
 
-    'allowed_origins' => explode(',', env('CORS_ALLOWED_ORIGINS', 'http://localhost:5173,http://localhost:3000','https://lexium-liard.vercel.app', 'https://lexium-law.vercel.app')),
+    // env() takes a single default — all fallback origins must live in one comma-separated string.
+    'allowed_origins' => array_values(array_filter(array_map('trim', explode(',', env(
+        'CORS_ALLOWED_ORIGINS',
+        'http://localhost:5173,http://localhost:3000,https://lexium-liard.vercel.app,https://lexium-law.vercel.app'
+    ))))),
 
     'allowed_origins_patterns' => [],
 
@@ -24,8 +28,10 @@ return [
 
     'exposed_headers' => [],
 
-    'max_age' => 0,
+    // Let browsers cache preflight responses for an hour.
+    'max_age' => 3600,
 
-    'supports_credentials' => true,
+    // Auth uses Bearer tokens, not cookies — credentials mode isn't needed.
+    'supports_credentials' => false,
 
 ];

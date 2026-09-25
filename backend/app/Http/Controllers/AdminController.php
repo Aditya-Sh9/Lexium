@@ -217,6 +217,12 @@ class AdminController extends Controller
             return response()->json(['error' => 'User not found'], 404);
         }
 
+        // Admin accounts are managed outside the dashboard; this also stops an
+        // admin from deleting their own account mid-session.
+        if ($user->role === 'admin') {
+            return response()->json(['error' => 'Admin accounts cannot be deleted from here.'], 403);
+        }
+
         // If the user is a provider, delete their provider record too
         if ($user->role === 'provider') {
             Provider::where('user_id', (string) $user->_id)->delete();
@@ -301,7 +307,7 @@ class AdminController extends Controller
         ]);
 
         Transaction::create([
-            'transaction_id' => 'AWD-' . rand(1000, 9999),
+            'transaction_id' => $this->publicId('AWD'),
             'provider_id'    => (string) $provider->_id,
             'client_name'    => 'Admin Award',
             'type'           => $validated['reason'],
@@ -743,7 +749,7 @@ class AdminController extends Controller
         ]);
 
         $deduction = Transaction::create([
-            'transaction_id' => 'ADJ-' . rand(1000, 9999),
+            'transaction_id' => $this->publicId('ADJ'),
             'provider_id'    => (string) $complaint->provider_id,
             'client_name'    => 'Compliance Adjustment',
             'type'           => 'Compliance Adjustment',

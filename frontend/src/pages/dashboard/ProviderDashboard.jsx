@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react';
-import { Calendar, Users, TrendingUp, Award, Clock, ShieldCheck, CheckCircle2, Star, Trophy, Briefcase, FileText } from 'lucide-react';
+import { Calendar, TrendingUp, Clock, ShieldCheck, CheckCircle2, Star, Trophy } from 'lucide-react';
 import { formatRupees } from '../../utils/formatters';
-import { useAuth } from '../../context/AuthContext';
 import { Link, useNavigate } from 'react-router';
 import api from '../../services/api';
 import { motion } from 'framer-motion';
@@ -16,7 +15,6 @@ const TIER_MILESTONES = [
 ];
 
 export default function ProviderDashboard() {
-  const { user } = useAuth();
   const navigate = useNavigate();
   const [data, setData] = useState({
     upcomingAppointments: [],

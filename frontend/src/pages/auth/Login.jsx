@@ -1,11 +1,13 @@
 import { useState } from 'react';
-import { Link, useNavigate } from 'react-router';
+import { Link, useLocation, useNavigate } from 'react-router';
 import {
   Mail, Lock, Eye, EyeOff, Scale, Shield, User, Briefcase,
   ArrowRight, CheckCircle2, ShieldCheck,
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { themeToast } from '../../utils/alert';
+import { sendPasswordResetEmail } from 'firebase/auth';
+import { auth } from '../../config/firebase';
 
 const ROLE_TABS = [
   { id: 'citizen',  label: 'Citizen',        icon: User,      hint: 'Access legal services, file cases, and track consultations.' },
@@ -13,11 +15,40 @@ const ROLE_TABS = [
   { id: 'admin',    label: 'Admin',          icon: Shield,    hint: 'Platform administration portal.' },
 ];
 
+// Only return to a page the signed-in role can actually open.
+const ROLE_PREFIXES = { citizen: ['/citizen/', '/book/', '/providers'], provider: ['/provider/'], admin: ['/admin/'] };
+function safeReturnPath(from, role) {
+  if (typeof from !== 'string' || !from.startsWith('/') || from.startsWith('//')) return null;
+  return (ROLE_PREFIXES[role] || []).some((p) => from.startsWith(p)) ? from : null;
+}
+
 export default function Login() {
   const navigate = useNavigate();
+  const location = useLocation();
+  const returnTo = location.state?.from;
   const { login, adminLogin } = useAuth();
   const [activeRole, setActiveRole] = useState('citizen');
   const [form, setForm] = useState({ email: '', password: '' });
+  const [resetting, setResetting] = useState(false);
+
+  const handleForgotPassword = async () => {
+    const email = form.email.trim();
+    if (!email) {
+      themeToast.error('Enter your email above, then choose "Forgot password?" again.');
+      document.getElementById('login-email')?.focus();
+      return;
+    }
+    try {
+      setResetting(true);
+      await sendPasswordResetEmail(auth, email);
+      themeToast.success(`If an account exists for ${email}, a reset link is on its way.`);
+    } catch (err) {
+      if (String(err?.code).includes('invalid-email')) themeToast.error('That email address doesn’t look right.');
+      else themeToast.success(`If an account exists for ${email}, a reset link is on its way.`);
+    } finally {
+      setResetting(false);
+    }
+  };
   const [showPw, setShowPw] = useState(false);
   const [keepSignedIn, setKeepSignedIn] = useState(true);
   const [loading, setLoading] = useState(false);
@@ -36,11 +67,11 @@ export default function Login() {
       if (activeRole === 'admin') {
         await adminLogin(form.email, form.password);
         themeToast.success('Logged in as Admin');
-        navigate('/admin/dashboard');
+        navigate(safeReturnPath(returnTo, 'admin') || '/admin/dashboard', { replace: true });
         return;
       }
 
-      const result = await login(form.email, form.password);
+      const result = await login(form.email, form.password, { remember: keepSignedIn });
       const user = result.user;
 
       if (user.role === 'admin') {
@@ -53,11 +84,11 @@ export default function Login() {
           navigate('/rejected-application');
         } else {
           themeToast.success('Welcome back!');
-          navigate('/provider/dashboard');
+          navigate(safeReturnPath(returnTo, 'provider') || '/provider/dashboard', { replace: true });
         }
       } else {
         themeToast.success('Welcome back!');
-        navigate('/citizen/dashboard');
+        navigate(safeReturnPath(returnTo, 'citizen') || '/citizen/dashboard', { replace: true });
       }
     } catch (err) {
       const msg = err.message || 'Login failed';
@@ -242,13 +273,16 @@ export default function Login() {
               <div>
                 <div className="flex items-center justify-between mb-1.5">
                   <label htmlFor="login-pw" className="label-strong label">Password</label>
-                  <button
-                    type="button"
-                    onClick={() => themeToast('Password recovery coming soon.')}
-                    className="body-sm text-[var(--color-primary-700)] hover:underline cursor-pointer"
-                  >
-                    Forgot password?
-                  </button>
+                  {activeRole !== 'admin' && (
+                    <button
+                      type="button"
+                      onClick={handleForgotPassword}
+                      disabled={resetting}
+                      className="body-sm text-[var(--color-primary-700)] hover:underline cursor-pointer disabled:opacity-50 disabled:cursor-wait"
+                    >
+                      {resetting ? 'Sending…' : 'Forgot password?'}
+                    </button>
+                  )}
                 </div>
                 <div className="relative">
                   <Lock size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-surface-400 pointer-events-none" />

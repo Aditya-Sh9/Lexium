@@ -1,10 +1,8 @@
 import { useState, useEffect } from 'react';
-import { useAuth } from '../../context/AuthContext';
-import { ShieldCheck, Award, Star, Trophy, MapPin, TrendingUp } from 'lucide-react';
+import { ShieldCheck, Award, Star, Trophy, MapPin } from 'lucide-react';
 import api from '../../services/api';
 
 export default function ProviderEminence() {
-  const { user } = useAuth();
   const [eminenceData, setEminenceData] = useState(null);
   const [leaderboard, setLeaderboard] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -146,7 +144,7 @@ export default function ProviderEminence() {
               </thead>
               <tbody>
                 {leaderboard.map((p, i) => {
-                  const isCurrentUser = p.email === user?.email;
+                  const isCurrentUser = i + 1 === eminenceData?.leaderboardPosition;
                   return (
                     <tr key={p._id} className={`border-b border-surface-100 last:border-0 transition-colors ${isCurrentUser ? 'bg-primary-50/50 border-primary-200' : 'hover:bg-surface-50'}`}>
                       <td className="px-4 py-3">

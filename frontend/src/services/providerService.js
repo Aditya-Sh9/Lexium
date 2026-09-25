@@ -2,7 +2,7 @@
  * Provider Service — fetches from Laravel API
  */
 import api from './api';
-import { categories } from '../data/categories';
+import { categories, categoryLabel, toCategoryId } from '../data/categories';
 
 /**
  * GET /api/providers — fetches providers with optional client-side filters
@@ -10,21 +10,24 @@ import { categories } from '../data/categories';
 export async function getProviders(filters = {}) {
   const allProviders = await api.get('/providers');
 
-  let results = [...allProviders];
+  let results = allProviders.map((p) => ({ ...p, service_type: toCategoryId(p.service_type || p.category) }));
 
   if (filters.category) {
-    results = results.filter((p) => (p.service_type || p.category) === filters.category);
+    results = results.filter((p) => p.service_type === toCategoryId(filters.category));
   }
 
   if (filters.search) {
-    const q = filters.search.toLowerCase();
-    results = results.filter(
-      (p) =>
-        (p.name || '').toLowerCase().includes(q) ||
-        (p.specialization || '').toLowerCase().includes(q) ||
-        (p.service_type || '').toLowerCase().includes(q) ||
-        (p.location || '').toLowerCase().includes(q)
-    );
+    // Every word must appear somewhere in the profile, so "GST filing" finds a
+    // tax consultant whose services list "GST Return Filing".
+    const terms = filters.search.toLowerCase().split(/\s+/).filter(Boolean);
+    results = results.filter((p) => {
+      const haystack = [
+        p.name, p.specialization, p.location, p.bio,
+        p.service_type, categoryLabel(p.service_type),
+        ...(p.services || []).map((s) => s?.name),
+      ].join(' ').toLowerCase();
+      return terms.every((t) => haystack.includes(t));
+    });
   }
 
   if (filters.location) {

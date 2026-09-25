@@ -1,5 +1,7 @@
 import { createContext, useContext, useState, useEffect } from 'react';
 import * as authService from '../services/authService';
+import { SESSION_EXPIRED_EVENT } from '../services/session';
+import { themeToast } from '../utils/alert';
 
 const AuthContext = createContext(null);
 
@@ -20,16 +22,23 @@ export function AuthProvider({ children }) {
     const storedUser = authService.getCurrentUser();
 
     if (storedUser?.role === 'admin') {
-      // Admin sessions don't use Firebase — just restore from localStorage
+      // Admin sessions don't use Firebase — restore from localStorage. The
+      // token is re-validated by the first admin request (401 → signed out).
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- one-time restore from storage
       setUser(storedUser);
       setLoading(false);
-      return;
+      return undefined;
     }
 
-    // Firebase session listener for citizen/provider
-    import('firebase/auth').then(({ onAuthStateChanged }) => {
-      import('../config/firebase').then(({ auth }) => {
-        const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+    // Firebase session listener for citizen/provider. The subscription is set
+    // up asynchronously, so track it (and unmount) explicitly for cleanup.
+    let unsubscribe = null;
+    let cancelled = false;
+
+    Promise.all([import('firebase/auth'), import('../config/firebase')]).then(
+      ([{ onAuthStateChanged }, { auth }]) => {
+        if (cancelled) return;
+        unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
           if (firebaseUser) {
             // Firebase is logged in — get the real profile from MongoDB
             try {
@@ -75,14 +84,29 @@ export function AuthProvider({ children }) {
           }
           setLoading(false);
         });
+      },
+    ).catch(() => setLoading(false));
 
-        return () => unsubscribe();
-      });
-    });
+    return () => {
+      cancelled = true;
+      unsubscribe?.();
+    };
   }, []);
 
-  const login = async (email, password) => {
-    const result = await authService.login(email, password);
+  // The API layer signals when the server rejects our credentials.
+  useEffect(() => {
+    const onExpired = async () => {
+      if (!authService.getCurrentUser()) return;
+      await authService.logout({ revoke: false });
+      setUser(null);
+      themeToast.error('Your session has expired. Please sign in again.');
+    };
+    window.addEventListener(SESSION_EXPIRED_EVENT, onExpired);
+    return () => window.removeEventListener(SESSION_EXPIRED_EVENT, onExpired);
+  }, []);
+
+  const login = async (email, password, options) => {
+    const result = await authService.login(email, password, options);
     setUser(result.user);
     return result;
   };
@@ -119,7 +143,9 @@ export function AuthProvider({ children }) {
         setUser(updated);
         localStorage.setItem('lexium_user', JSON.stringify(updated));
       }
-    } catch {}
+    } catch {
+      // Keep the current user if the status check fails — it's a best-effort refresh.
+    }
   };
 
   const value = {
@@ -145,6 +171,7 @@ export function AuthProvider({ children }) {
   );
 }
 
+// eslint-disable-next-line react-refresh/only-export-components -- hook is intentionally co-located with its provider
 export function useAuth() {
   const context = useContext(AuthContext);
   if (!context) {

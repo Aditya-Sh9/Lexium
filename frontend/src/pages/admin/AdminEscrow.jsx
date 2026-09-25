@@ -1,19 +1,10 @@
 import { useState, useEffect, useMemo } from 'react';
-import { Lock, ShieldCheck, AlertCircle, IndianRupee, Search, CheckCircle2 } from 'lucide-react';
+import { Lock, ShieldCheck, AlertCircle, Search } from 'lucide-react';
 import { themeToast, themeAlert } from '../../utils/alert';
 import { formatRupees } from '../../utils/formatters';
+import { adminFetch } from '../../services/adminApi';
 
 const API = import.meta.env.VITE_API_URL || 'http://localhost:8000/api';
-
-const CASE_STATUS_STYLE = {
-  pending:              'bg-yellow-100 text-yellow-700',
-  'under-review':       'bg-blue-100 text-blue-700',
-  'in-progress':        'bg-indigo-100 text-indigo-700',
-  'awaiting-documents': 'bg-orange-100 text-orange-700',
-  accepted:             'bg-blue-100 text-blue-700',
-  resolved:             'bg-green-100 text-green-700',
-  closed:               'bg-surface-200 text-surface-700',
-};
 
 export default function AdminEscrow() {
   const [data, setData] = useState({ transactions: [], summary: { count: 0, totalHeld: 0, releasable: 0, blockedByCase: 0 } });
@@ -25,7 +16,7 @@ export default function AdminEscrow() {
 
   const fetchData = () => {
     setLoading(true);
-    fetch(`${API}/admin/escrow`, { headers: { Authorization: `Bearer ${token}` } })
+    adminFetch(`${API}/admin/escrow`, { headers: { Authorization: `Bearer ${token}` } })
       .then(r => r.json())
       .then(d => setData({
         transactions: d.transactions || [],
@@ -52,7 +43,7 @@ export default function AdminEscrow() {
 
     setReleasingId(trx._id || trx.id);
     try {
-      const res = await fetch(`${API}/admin/transactions/${trx._id || trx.id}/release`, {
+      const res = await adminFetch(`${API}/admin/transactions/${trx._id || trx.id}/release`, {
         method: 'POST',
         headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
       });

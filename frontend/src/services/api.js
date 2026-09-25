@@ -1,3 +1,5 @@
+import { signalSessionExpired, withTimeout } from './session';
+
 const BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api';
 
 /**
@@ -35,56 +37,85 @@ function normalizeMongo(data) {
   return data;
 }
 
-async function request(endpoint, options = {}) {
-  const url = `${BASE_URL}${endpoint}`;
-
-  const config = {
-    headers: {
-      'Content-Type': 'application/json',
-      ...options.headers,
-    },
-    ...options,
-  };
-
-  // Attach Firebase token or fallback to stored token
+async function authHeader() {
   try {
     const { auth } = await import('../config/firebase');
-    if (auth.currentUser) {
-      const token = await auth.currentUser.getIdToken();
-      config.headers.Authorization = `Bearer ${token}`;
-    } else {
-      const localToken = localStorage.getItem('auth_token');
-      if (localToken) config.headers.Authorization = `Bearer ${localToken}`;
-    }
+    // getIdToken() transparently refreshes an expired (1h) Firebase token.
+    if (auth.currentUser) return `Bearer ${await auth.currentUser.getIdToken()}`;
   } catch {
-    const localToken = localStorage.getItem('auth_token');
-    if (localToken) config.headers.Authorization = `Bearer ${localToken}`;
+    // Firebase not initialised — fall through to stored tokens.
   }
+  const token = localStorage.getItem('admin_token') || localStorage.getItem('auth_token');
+  return token ? `Bearer ${token}` : null;
+}
 
-  // Send role header for mock-auth dev mode
-  const userStr = localStorage.getItem('user') || localStorage.getItem('lexium_user');
-  if (userStr) {
+/** Turns a Laravel error body into one readable sentence. */
+function errorMessage(body, status) {
+  if (body?.errors && typeof body.errors === 'object') {
+    const first = Object.values(body.errors).flat()[0];
+    if (first) return first;
+  }
+  if (body?.error) return body.error;
+  if (body?.message) return body.message;
+  if (status === 429) return 'Too many requests. Please wait a moment and try again.';
+  if (status >= 500) return 'Something went wrong on our side. Please try again shortly.';
+  return `Request failed (${status}).`;
+}
+
+async function request(endpoint, options = {}) {
+  const headers = {
+    Accept: 'application/json',
+    'Content-Type': 'application/json',
+    ...(options.headers || {}),
+  };
+
+  const authorization = await authHeader();
+  if (authorization) headers.Authorization = authorization;
+
+  // Role hint for the backend's local MOCK_AUTH mode only — never sent in production.
+  if (import.meta.env.DEV) {
     try {
-      const user = JSON.parse(userStr);
-      if (user.role) config.headers['X-Mock-Role'] = user.role;
-    } catch {}
+      const role = JSON.parse(localStorage.getItem('lexium_user') || 'null')?.role;
+      if (role) headers['X-Mock-Role'] = role;
+    } catch {
+      // Ignore a corrupt stored user.
+    }
   }
 
-  const response = await fetch(url, config);
+  const { init, clear } = withTimeout({ ...options, headers });
+  let response;
+  try {
+    response = await fetch(`${BASE_URL}${endpoint}`, init);
+  } catch (err) {
+    if (err.name === 'AbortError') throw new Error('The server took too long to respond. Please try again.', { cause: err });
+    throw new Error('Could not reach the server. Check your connection and try again.', { cause: err });
+  } finally {
+    clear();
+  }
+
+  const text = await response.text();
+  let body;
+  try {
+    body = text ? JSON.parse(text) : null;
+  } catch {
+    body = null;
+  }
 
   if (!response.ok) {
-    const error = await response.json().catch(() => ({}));
-    throw new Error(error.error || error.message || `API Error: ${response.status}`);
+    if (response.status === 401 && authorization) signalSessionExpired();
+    const error = new Error(errorMessage(body, response.status));
+    error.status = response.status;
+    error.body = body;
+    throw error;
   }
 
-  const json = await response.json();
-  return normalizeMongo(json);
+  return normalizeMongo(body);
 }
 
 export const api = {
   get:    (endpoint)       => request(endpoint, { method: 'GET' }),
-  post:   (endpoint, data) => request(endpoint, { method: 'POST',   body: JSON.stringify(data) }),
-  put:    (endpoint, data) => request(endpoint, { method: 'PUT',    body: JSON.stringify(data) }),
+  post:   (endpoint, data) => request(endpoint, { method: 'POST',   body: JSON.stringify(data ?? {}) }),
+  put:    (endpoint, data) => request(endpoint, { method: 'PUT',    body: JSON.stringify(data ?? {}) }),
   delete: (endpoint)       => request(endpoint, { method: 'DELETE' }),
 };
 

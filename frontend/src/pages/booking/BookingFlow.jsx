@@ -95,7 +95,6 @@ export default function BookingFlow() {
         type: selectedService.name,
         details: caseData.details.trim(),
         urgency: caseData.urgency,
-        quoted_price: selectedService.price || undefined,
         preferred_date: caseData.preferred_date || undefined,
         preferred_time: caseData.preferred_time || undefined,
       });
@@ -273,7 +272,7 @@ export default function BookingFlow() {
                 </label>
                 <input
                   type="date"
-                  min={new Date().toISOString().split('T')[0]}
+                  min={new Date().toLocaleDateString('en-CA')}
                   value={caseData.preferred_date}
                   onChange={e => setCaseData({ ...caseData, preferred_date: e.target.value })}
                   className="w-full px-4 py-3 bg-surface-50 border border-surface-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500/30"

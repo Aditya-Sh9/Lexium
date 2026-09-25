@@ -1,5 +1,4 @@
 import { useState, useEffect } from 'react';
-import { useAuth } from '../../context/AuthContext';
 import { Calendar, Clock, CheckCircle2, XCircle, FileText, Check, Activity, ChevronDown, MessageSquare } from 'lucide-react';
 import api from '../../services/api';
 import { themeToast, themeAlert } from '../../utils/alert';
@@ -11,12 +10,6 @@ const STATUS_OPTIONS = [
   { value: 'resolved',           label: 'Resolved' },
   { value: 'closed',             label: 'Closed' },
 ];
-
-const CASE_STATUS_STYLE = {
-  pending:   'bg-yellow-100 text-yellow-700',
-  confirmed: 'bg-blue-100 text-blue-700',
-  'in-progress': 'bg-indigo-100 text-indigo-700',
-};
 
 function timeAgo(iso) {
   if (!iso) return '';
@@ -110,7 +103,6 @@ function UpdateStatusModal({ petition, onClose, onUpdated }) {
 
 // ── Main component ───────────────────────────────────────────────
 export default function ProviderDocket() {
-  const { user } = useAuth();
   const [petitions, setPetitions] = useState([]);
   const [activePetitions, setActivePetitions] = useState([]);
   const [activeCases, setActiveCases] = useState([]);

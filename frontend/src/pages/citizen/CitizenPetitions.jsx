@@ -1,5 +1,4 @@
 import { useState, useEffect } from 'react';
-import { useAuth } from '../../context/AuthContext';
 import {
   FileText, Clock, AlertCircle, ChevronDown, ChevronUp,
   Trash2, CheckCircle2, XCircle, Activity, MessageSquare, ShieldAlert,
@@ -45,7 +44,6 @@ function timeAgo(iso) {
 }
 
 export default function CitizenPetitions() {
-  const { user } = useAuth();
   const [petitions, setPetitions] = useState([]);
   const [loading, setLoading] = useState(true);
   const [expandedId, setExpandedId] = useState(null);

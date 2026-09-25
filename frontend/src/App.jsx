@@ -1,47 +1,51 @@
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router';
+import { lazy, Suspense, useEffect } from 'react';
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router';
 import { Toaster } from 'react-hot-toast';
 import MainLayout from './layouts/MainLayout';
 import DashboardLayout from './layouts/DashboardLayout';
 import Home from './pages/Home';
-import Login from './pages/auth/Login';
-import Register from './pages/auth/Register';
-import ProviderOnboarding from './pages/auth/ProviderOnboarding';
-import PendingApproval from './pages/auth/PendingApproval';
-import RejectedApplication from './pages/auth/RejectedApplication';
-import ProviderListing from './pages/providers/ProviderListing';
-import ProviderProfile from './pages/providers/ProviderProfile';
-import BookingFlow from './pages/booking/BookingFlow';
+const Login = lazy(() => import('./pages/auth/Login'));
+const Register = lazy(() => import('./pages/auth/Register'));
+const ProviderOnboarding = lazy(() => import('./pages/auth/ProviderOnboarding'));
+const PendingApproval = lazy(() => import('./pages/auth/PendingApproval'));
+const RejectedApplication = lazy(() => import('./pages/auth/RejectedApplication'));
+const ProviderListing = lazy(() => import('./pages/providers/ProviderListing'));
+const ProviderProfile = lazy(() => import('./pages/providers/ProviderProfile'));
+const BookingFlow = lazy(() => import('./pages/booking/BookingFlow'));
 import ProtectedRoute from './components/common/ProtectedRoute';
+import ErrorBoundary from './components/common/ErrorBoundary';
+import PageLoader from './components/common/PageLoader';
+const NotFound = lazy(() => import('./pages/NotFound'));
 
 // Public Pages
-import About from './pages/public/About';
-import Terms from './pages/public/Terms';
-import Privacy from './pages/public/Privacy';
-import Guidelines from './pages/public/Guidelines';
-import Help from './pages/public/Help';
-import Contact from './pages/public/Contact';
+const About = lazy(() => import('./pages/public/About'));
+const Terms = lazy(() => import('./pages/public/Terms'));
+const Privacy = lazy(() => import('./pages/public/Privacy'));
+const Guidelines = lazy(() => import('./pages/public/Guidelines'));
+const Help = lazy(() => import('./pages/public/Help'));
+const Contact = lazy(() => import('./pages/public/Contact'));
 
 import { useAuth } from './context/AuthContext';
 
 // Dashboard / Provider Pages
-import ProviderDashboard from './pages/dashboard/ProviderDashboard';
-import ProviderDocket from './pages/provider/ProviderDocket';
-import ProviderLedger from './pages/provider/ProviderLedger';
-import ProviderEminence from './pages/provider/ProviderEminence';
-import ProviderProfileEdit from './pages/provider/ProviderProfileEdit';
+const ProviderDashboard = lazy(() => import('./pages/dashboard/ProviderDashboard'));
+const ProviderDocket = lazy(() => import('./pages/provider/ProviderDocket'));
+const ProviderLedger = lazy(() => import('./pages/provider/ProviderLedger'));
+const ProviderEminence = lazy(() => import('./pages/provider/ProviderEminence'));
+const ProviderProfileEdit = lazy(() => import('./pages/provider/ProviderProfileEdit'));
 
 // Dashboard / Citizen Pages
-import CitizenDashboard from './pages/dashboard/CitizenDashboard';
-import CitizenPetitions from './pages/citizen/CitizenPetitions';
-import CitizenHistory from './pages/citizen/CitizenHistory';
-import CitizenIssues from './pages/citizen/CitizenIssues';
+const CitizenDashboard = lazy(() => import('./pages/dashboard/CitizenDashboard'));
+const CitizenPetitions = lazy(() => import('./pages/citizen/CitizenPetitions'));
+const CitizenHistory = lazy(() => import('./pages/citizen/CitizenHistory'));
+const CitizenIssues = lazy(() => import('./pages/citizen/CitizenIssues'));
 
 // Admin Pages
-import AdminDashboard from './pages/admin/AdminDashboard';
-import AdminProviders from './pages/admin/AdminProviders';
-import AdminUsers from './pages/admin/AdminUsers';
-import AdminEscrow from './pages/admin/AdminEscrow';
-import AdminComplaints from './pages/admin/AdminComplaints';
+const AdminDashboard = lazy(() => import('./pages/admin/AdminDashboard'));
+const AdminProviders = lazy(() => import('./pages/admin/AdminProviders'));
+const AdminUsers = lazy(() => import('./pages/admin/AdminUsers'));
+const AdminEscrow = lazy(() => import('./pages/admin/AdminEscrow'));
+const AdminComplaints = lazy(() => import('./pages/admin/AdminComplaints'));
 
 
 // Smart redirect: /dashboard → role-specific dashboard
@@ -54,10 +58,19 @@ function DashboardRedirect() {
   return <Navigate to={user?.role === 'provider' ? '/provider/dashboard' : '/citizen/dashboard'} replace />;
 }
 
-export default function App() {
+// Route pages are code-split: each loads on first visit instead of all up front.
+function AppRoutes() {
+  const { pathname } = useLocation();
+
+  // Auth pages render outside MainLayout, which titles every other route.
+  useEffect(() => {
+    if (pathname === '/login') document.title = 'Log in · Lexium';
+    if (pathname === '/register') document.title = 'Create an account · Lexium';
+  }, [pathname]);
+
   return (
-    <BrowserRouter>
-      <Toaster position="top-right" />
+    <ErrorBoundary resetKey={pathname}>
+      <Suspense fallback={<PageLoader />}>
       <Routes>
         {/* Auth pages — rendered without the global Navbar/Footer chrome */}
         <Route path="/login" element={<Login />} />
@@ -116,8 +129,20 @@ export default function App() {
               <Route path="complaints" element={<AdminComplaints />} />
             </Route>
           </Route>
+
+          <Route path="*" element={<NotFound />} />
         </Route>
       </Routes>
+      </Suspense>
+    </ErrorBoundary>
+  );
+}
+
+export default function App() {
+  return (
+    <BrowserRouter>
+      <Toaster position="top-right" />
+      <AppRoutes />
     </BrowserRouter>
   );
 }

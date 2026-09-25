@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useAuth } from '../../context/AuthContext';
-import { Clock, Star, Search, MessageSquarePlus, X, CheckCircle2, ShieldAlert } from 'lucide-react';
+import { Clock, Star, Search, X, CheckCircle2, ShieldAlert } from 'lucide-react';
 import { Link } from 'react-router';
 import api from '../../services/api';
 import { themeToast } from '../../utils/alert';
@@ -107,7 +106,6 @@ function ReviewModal({ appointment, onClose, onSubmitted }) {
 }
 
 export default function CitizenHistory() {
-  const { user } = useAuth();
   const [history, setHistory] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');

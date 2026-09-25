@@ -1,18 +1,28 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router';
 import { Menu, X, Scale, LogOut } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { getInitials } from '../../utils/helpers';
 
 export default function Navbar() {
-  const [isOpen, setIsOpen] = useState(false);
   const location = useLocation();
+  // The menu is tied to the path it was opened on, so navigating closes it.
+  const [openPath, setOpenPath] = useState(null);
+  const isOpen = openPath === location.pathname;
+  const setIsOpen = (open) => setOpenPath(open ? location.pathname : null);
+
+  useEffect(() => {
+    if (!isOpen) return undefined;
+    const onKey = (e) => e.key === 'Escape' && setOpenPath(null);
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [isOpen]);
   const navigate = useNavigate();
   const { user, isAuthenticated, isAdmin, isPendingProvider, logout } = useAuth();
 
   // Dashboard "home" path for the avatar chip
   const dashboardPath = (() => {
-    if (!isAuthenticated) return '/login';
+    if (!isAuthenticated) return '/';
     if (isAdmin) return '/admin/dashboard';
     if (user?.role === 'provider') {
       return isPendingProvider ? '/pending-approval' : '/provider/dashboard';
@@ -39,8 +49,9 @@ export default function Navbar() {
   let navLinks = [];
   if (!isAuthenticated) {
     navLinks = [
-      { to: '/', label: 'Home' },
       { to: '/providers', label: 'Find Providers' },
+      { to: '/about',     label: 'How it Works' },
+      { to: '/help',      label: 'Help' },
     ];
   } else if (isAdmin) {
     navLinks = [
@@ -74,8 +85,11 @@ export default function Navbar() {
 
   const initials = user?.name ? getInitials(user.name) : '';
 
+  // Nested routes (e.g. /providers/:id) keep their parent link highlighted.
+  const isActive = (to) => location.pathname === to || location.pathname.startsWith(`${to}/`);
+
   return (
-    <nav className="fixed top-0 w-full z-50 lx-topnav">
+    <header className="fixed top-0 w-full z-50 lx-topnav">
       <div
         className="h-[60px] px-6 md:px-8 max-w-[1440px] mx-auto grid items-center"
         style={{ gridTemplateColumns: '1fr auto 1fr' }}
@@ -85,6 +99,7 @@ export default function Navbar() {
           to={dashboardPath}
           className="flex items-center gap-2.5 group justify-self-start"
           onClick={() => setIsOpen(false)}
+          aria-label="Lexium home"
         >
           <div
             className="w-7 h-7 rounded-md bg-primary-900 flex items-center justify-center transition-transform group-hover:scale-105"
@@ -101,12 +116,13 @@ export default function Navbar() {
         </Link>
 
         {/* Centered nav — middle column. One bar for everything. */}
-        <nav className="hidden md:flex items-center gap-7 h-[60px] justify-self-center">
+        <nav aria-label="Primary" className="hidden md:flex items-center gap-7 h-[60px] justify-self-center">
           {navLinks.map((link) => (
             <Link
               key={link.to}
               to={link.to}
-              className={`lx-nav-link ${location.pathname === link.to ? 'active' : ''}`}
+              className={`lx-nav-link ${isActive(link.to) ? 'active' : ''}`}
+              aria-current={isActive(link.to) ? 'page' : undefined}
             >
               {link.label}
             </Link>
@@ -138,16 +154,20 @@ export default function Navbar() {
             </>
           ) : (
             <>
-              <Link to="/login" className="lx-btn lx-btn-ghost lx-btn-sm">Login</Link>
-              <Link to="/register" className="lx-btn lx-btn-primary lx-btn-sm">Register</Link>
+              <Link to="/login" className="lx-btn lx-btn-ghost lx-btn-sm">Log in</Link>
+              <Link to="/register" className="lx-btn lx-btn-primary lx-btn-sm">Create account</Link>
             </>
           )}
         </div>
 
         {/* Mobile hamburger */}
         <button
-          className="md:hidden p-2 text-primary-900 cursor-pointer justify-self-end"
+          type="button"
+          className="md:hidden -mr-2 flex h-11 w-11 items-center justify-center rounded-md text-primary-900 cursor-pointer justify-self-end focus-visible:outline-2 focus-visible:outline-primary-400"
           onClick={() => setIsOpen(!isOpen)}
+          aria-label={isOpen ? 'Close menu' : 'Open menu'}
+          aria-expanded={isOpen}
+          aria-controls="mobile-menu"
         >
           {isOpen ? <X size={22} /> : <Menu size={22} />}
         </button>
@@ -155,7 +175,9 @@ export default function Navbar() {
 
       {/* Mobile menu */}
       {isOpen && (
-        <div
+        <nav
+          id="mobile-menu"
+          aria-label="Mobile"
           className="md:hidden bg-surface-50/95 backdrop-blur-[20px] px-6 py-4 space-y-3"
           style={{ borderTop: '1px solid var(--hairline)' }}
         >
@@ -164,8 +186,9 @@ export default function Navbar() {
               key={link.to}
               to={link.to}
               onClick={() => setIsOpen(false)}
-              className={`block py-1.5 text-base ${
-                location.pathname === link.to ? 'text-primary-900 font-medium' : 'text-surface-700'
+              aria-current={isActive(link.to) ? 'page' : undefined}
+              className={`block py-2.5 text-base ${
+                isActive(link.to) ? 'text-primary-900 font-medium' : 'text-surface-700'
               }`}
             >
               {link.label}
@@ -190,17 +213,17 @@ export default function Navbar() {
               </>
             ) : (
               <>
-                <Link to="/login" onClick={() => setIsOpen(false)} className="lx-btn lx-btn-ghost lx-btn-sm w-max">
-                  Login
+                <Link to="/login" onClick={() => setIsOpen(false)} className="lx-btn lx-btn-secondary lx-btn-lg">
+                  Log in
                 </Link>
-                <Link to="/register" onClick={() => setIsOpen(false)} className="lx-btn lx-btn-primary lx-btn-sm w-max">
-                  Register
+                <Link to="/register" onClick={() => setIsOpen(false)} className="lx-btn lx-btn-primary lx-btn-lg">
+                  Create account
                 </Link>
               </>
             )}
           </div>
-        </div>
+        </nav>
       )}
-    </nav>
+    </header>
   );
 }

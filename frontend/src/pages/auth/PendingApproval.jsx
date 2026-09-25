@@ -1,6 +1,6 @@
-import { Link } from 'react-router';
 import { Clock, Scale, CheckCircle, LogOut, Mail } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
+import { SUPPORT_EMAIL } from '../../config/site';
 
 export default function PendingApproval() {
   const { user, logout } = useAuth();
@@ -60,9 +60,9 @@ export default function PendingApproval() {
         )}
 
         <div className="flex flex-col sm:flex-row gap-3 justify-center">
-          <Link to="mailto:support@lexium.in" className="inline-flex items-center justify-center gap-2 px-5 py-2.5 border border-surface-200 text-surface-700 font-sans text-sm rounded-xl hover:bg-surface-50 transition-colors">
+          <a href={`mailto:${SUPPORT_EMAIL}`} className="inline-flex items-center justify-center gap-2 px-5 py-2.5 border border-surface-200 text-surface-700 font-sans text-sm rounded-xl hover:bg-surface-50 transition-colors">
             <Mail size={16} /> Contact Support
-          </Link>
+          </a>
           <button onClick={logout} className="inline-flex items-center justify-center gap-2 px-5 py-2.5 bg-surface-100 text-surface-600 font-sans text-sm rounded-xl hover:bg-surface-200 transition-colors cursor-pointer">
             <LogOut size={16} /> Sign Out
           </button>

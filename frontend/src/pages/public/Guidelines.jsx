@@ -2,7 +2,7 @@ import { motion } from 'framer-motion';
 
 export default function Guidelines() {
   return (
-    <div className="min-h-screen bg-surface-50 pt-32 pb-20 px-6">
+    <div className="pt-14 pb-20 px-5 sm:px-8 lg:pt-20">
       <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="max-w-[800px] mx-auto bg-white rounded-3xl p-10 md:p-16 border border-surface-200 shadow-diffused relative overflow-hidden">
         <div className="absolute inset-0 bg-arch-pattern opacity-5 pointer-events-none"></div>
         <div className="relative z-10">

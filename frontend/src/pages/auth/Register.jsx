@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Link, useNavigate } from 'react-router';
+import { Link, useNavigate, useSearchParams } from 'react-router';
 import {
   Mail, Lock, Eye, EyeOff, Scale, User, Briefcase, Phone,
   ArrowRight, CheckCircle2, ShieldCheck,
@@ -10,7 +10,8 @@ import { themeToast } from '../../utils/alert';
 export default function Register() {
   const navigate = useNavigate();
   const { registerCitizen } = useAuth();
-  const [role, setRole] = useState('citizen');
+  const [searchParams] = useSearchParams();
+  const [role, setRole] = useState(searchParams.get('role') === 'provider' ? 'provider' : 'citizen');
   const [showPw, setShowPw] = useState(false);
   const [loading, setLoading] = useState(false);
   const [form, setForm] = useState({ name: '', email: '', password: '', confirmPassword: '', phone: '' });
@@ -183,6 +184,7 @@ export default function Register() {
                     key={tab.id}
                     type="button"
                     onClick={() => setRole(tab.id)}
+                    aria-pressed={role === tab.id}
                     className={`lx-tab ${role === tab.id ? 'active' : ''}`}
                   >
                     <Icon size={13} />

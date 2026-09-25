@@ -12,22 +12,42 @@ use App\Models\ProviderNotice;
 
 class ProviderController extends Controller
 {
+    /** Identity and verification data that must never reach the public API. */
+    private const PRIVATE_FIELDS = [
+        'email', 'phone', 'user_id', 'bar_council_id', 'government_id',
+        'verification_documents', 'rejection_reason',
+    ];
+
     // ── Public routes ────────────────────────────────────────────
 
     public function index()
     {
         $providers = Provider::where('status', 'approved')
             ->orderBy('rating', 'desc')
-            ->get();
+            ->get()
+            ->each->makeHidden(self::PRIVATE_FIELDS);
 
         return response()->json($providers);
     }
 
     public function show($id)
     {
-        $provider = Provider::find($id);
+        // Pending and rejected applicants are not public profiles.
+        $provider = Provider::where('_id', $id)->where('status', 'approved')->first();
         if (!$provider) return response()->json(['error' => 'Provider not found'], 404);
-        return response()->json($provider);
+        return response()->json($provider->makeHidden(self::PRIVATE_FIELDS));
+    }
+
+    /** Public top-20 leaderboard: ranking fields only, no contact details. */
+    public function leaderboard()
+    {
+        return response()->json(
+            Provider::where('status', 'approved')
+                ->orderBy('rating', 'desc')
+                ->orderBy('review_count', 'desc')
+                ->take(20)
+                ->get(['_id', 'name', 'specialization', 'location', 'rating', 'review_count', 'service_type', 'experience', 'badges'])
+        );
     }
 
     public function categories()
@@ -47,7 +67,7 @@ class ProviderController extends Controller
     public function dashboard(Request $request)
     {
         $provider = $this->resolveProvider($request);
-        if (!$provider) return response()->json(['error' => 'Provider profile not found'], 404);
+        if (!$provider) return response()->json(['error' => 'An approved provider account is required.'], 403);
 
         $pid = (string) $provider->_id;
 
@@ -134,7 +154,7 @@ class ProviderController extends Controller
     public function notices(Request $request)
     {
         $provider = $this->resolveProvider($request);
-        if (!$provider) return response()->json(['error' => 'Provider profile not found'], 404);
+        if (!$provider) return response()->json(['error' => 'An approved provider account is required.'], 403);
 
         // Providers see only active (unacknowledged) and acknowledged notices.
         // Cleared/archived notices are admin-only history.
@@ -159,7 +179,7 @@ class ProviderController extends Controller
     public function acknowledgeNotice(Request $request, $id)
     {
         $provider = $this->resolveProvider($request);
-        if (!$provider) return response()->json(['error' => 'Provider profile not found'], 404);
+        if (!$provider) return response()->json(['error' => 'An approved provider account is required.'], 403);
 
         $notice = ProviderNotice::where('_id', $id)
             ->where('provider_id', (string) $provider->_id)
@@ -187,7 +207,7 @@ class ProviderController extends Controller
     public function docket(Request $request)
     {
         $provider = $this->resolveProvider($request);
-        if (!$provider) return response()->json(['error' => 'Provider profile not found'], 404);
+        if (!$provider) return response()->json(['error' => 'An approved provider account is required.'], 403);
 
         $pid = (string) $provider->_id;
 
@@ -206,7 +226,7 @@ class ProviderController extends Controller
     public function ledger(Request $request)
     {
         $provider = $this->resolveProvider($request);
-        if (!$provider) return response()->json(['error' => 'Provider profile not found'], 404);
+        if (!$provider) return response()->json(['error' => 'An approved provider account is required.'], 403);
 
         $pid = (string) $provider->_id;
 
@@ -220,7 +240,7 @@ class ProviderController extends Controller
     public function eminence(Request $request)
     {
         $provider = $this->resolveProvider($request);
-        if (!$provider) return response()->json(['error' => 'Provider profile not found'], 404);
+        if (!$provider) return response()->json(['error' => 'An approved provider account is required.'], 403);
 
         $pid = (string) $provider->_id;
         $casesClosed = Petition::where('provider_id', $pid)->whereIn('status', ['resolved', 'closed'])->count();
@@ -269,20 +289,32 @@ class ProviderController extends Controller
     public function profile(Request $request)
     {
         $provider = $this->resolveProvider($request);
-        if (!$provider) return response()->json(['error' => 'Provider profile not found'], 404);
+        if (!$provider) return response()->json(['error' => 'An approved provider account is required.'], 403);
         return response()->json($provider);
     }
 
     public function updateProfile(Request $request)
     {
         $provider = $this->resolveProvider($request);
-        if (!$provider) return response()->json(['error' => 'Provider profile not found'], 404);
+        if (!$provider) return response()->json(['error' => 'An approved provider account is required.'], 403);
 
-        $provider->update($request->only([
-            'name', 'service_type', 'specialization', 'bar_council_id',
-            'location', 'experience', 'bio', 'price_range',
-            'consultation_fee', 'availability', 'services'
-        ]));
+        // Name, service type and enrolment number were verified at approval,
+        // so they are not self-editable: changing them would bypass review.
+        $validated = $request->validate([
+            'specialization'      => 'sometimes|nullable|string|max:120',
+            'location'            => 'sometimes|nullable|string|max:120',
+            'experience'          => 'sometimes|nullable|numeric|min:0|max:70',
+            'bio'                 => 'sometimes|nullable|string|max:2000',
+            'price_range'         => 'sometimes|nullable|string|max:60',
+            'consultation_fee'    => 'sometimes|nullable|numeric|min:0|max:1000000',
+            'availability'        => 'sometimes|nullable|string|max:200',
+            'services'            => 'sometimes|array|max:30',
+            'services.*.name'     => 'required_with:services|string|max:120',
+            'services.*.price'    => 'required_with:services|max:20',
+            'services.*.duration' => 'nullable|string|max:40',
+        ]);
+
+        $provider->update($validated);
 
         return response()->json(['message' => 'Profile updated successfully', 'provider' => $provider->fresh()]);
     }
@@ -292,15 +324,18 @@ class ProviderController extends Controller
     public function acceptPetition(Request $request, $id)
     {
         $provider = $this->resolveProvider($request);
-        if (!$provider) return response()->json(['error' => 'Provider profile not found'], 404);
+        if (!$provider) return response()->json(['error' => 'An approved provider account is required.'], 403);
 
         $petition = Petition::where('_id', $id)->where('provider_id', (string) $provider->_id)->first();
         if (!$petition) return response()->json(['error' => 'Petition not found'], 404);
+        if ($petition->status !== 'pending') {
+            return response()->json(['error' => "This request is already {$petition->status}."], 422);
+        }
 
         // Provider may optionally override scheduled date/time when accepting
         $validated = $request->validate([
-            'scheduled_date' => 'nullable|string',
-            'scheduled_time' => 'nullable|string',
+            'scheduled_date' => 'nullable|date_format:Y-m-d|after_or_equal:today',
+            'scheduled_time' => 'nullable|string|max:20',
         ]);
 
         // Resolve consultation date/time: provider-chosen > citizen-preferred > default (3 days out, 10am)
@@ -349,12 +384,16 @@ class ProviderController extends Controller
     public function declinePetition(Request $request, $id)
     {
         $provider = $this->resolveProvider($request);
-        if (!$provider) return response()->json(['error' => 'Provider profile not found'], 404);
+        if (!$provider) return response()->json(['error' => 'An approved provider account is required.'], 403);
 
         $petition = Petition::where('_id', $id)->where('provider_id', (string) $provider->_id)->first();
         if (!$petition) return response()->json(['error' => 'Petition not found'], 404);
+        if ($petition->status !== 'pending') {
+            return response()->json(['error' => 'Only new requests can be declined. Close the case instead.'], 422);
+        }
 
-        $reason = $request->input('reason', 'The provider has declined this request.');
+        $request->validate(['reason' => 'nullable|string|max:500']);
+        $reason = $request->input('reason') ?: 'The provider has declined this request.';
 
         $timeline = $petition->timeline ?? [];
         $timeline[] = [
@@ -380,10 +419,15 @@ class ProviderController extends Controller
     public function updatePetitionStatus(Request $request, $id)
     {
         $provider = $this->resolveProvider($request);
-        if (!$provider) return response()->json(['error' => 'Provider profile not found'], 404);
+        if (!$provider) return response()->json(['error' => 'An approved provider account is required.'], 403);
 
         $petition = Petition::where('_id', $id)->where('provider_id', (string) $provider->_id)->first();
         if (!$petition) return response()->json(['error' => 'Petition not found'], 404);
+        // Pending requests must be accepted first; declined and closed cases are
+        // final (a closed case may already have had its escrow released).
+        if (in_array($petition->status, ['pending', 'declined', 'closed'], true)) {
+            return response()->json(['error' => "A {$petition->status} case can't change status."], 422);
+        }
 
         $validated = $request->validate([
             'status' => 'required|in:under-review,in-progress,awaiting-documents,resolved,closed',
@@ -425,10 +469,13 @@ class ProviderController extends Controller
     public function acceptAppointment(Request $request, $id)
     {
         $provider = $this->resolveProvider($request);
-        if (!$provider) return response()->json(['error' => 'Provider profile not found'], 404);
+        if (!$provider) return response()->json(['error' => 'An approved provider account is required.'], 403);
 
         $appointment = Appointment::where('_id', $id)->where('provider_id', (string) $provider->_id)->first();
         if (!$appointment) return response()->json(['error' => 'Appointment not found'], 404);
+        if ($appointment->status !== 'pending') {
+            return response()->json(['error' => "This appointment is already {$appointment->status}."], 422);
+        }
 
         $appointment->update(['status' => 'confirmed']);
         return response()->json(['message' => 'Appointment accepted']);
@@ -437,10 +484,13 @@ class ProviderController extends Controller
     public function declineAppointment(Request $request, $id)
     {
         $provider = $this->resolveProvider($request);
-        if (!$provider) return response()->json(['error' => 'Provider profile not found'], 404);
+        if (!$provider) return response()->json(['error' => 'An approved provider account is required.'], 403);
 
         $appointment = Appointment::where('_id', $id)->where('provider_id', (string) $provider->_id)->first();
         if (!$appointment) return response()->json(['error' => 'Appointment not found'], 404);
+        if (!in_array($appointment->status, ['pending', 'confirmed'], true)) {
+            return response()->json(['error' => "This appointment is already {$appointment->status}."], 422);
+        }
 
         $appointment->update(['status' => 'declined']);
         return response()->json(['message' => 'Appointment declined']);
@@ -453,13 +503,22 @@ class ProviderController extends Controller
     public function completeAppointment(Request $request, $id)
     {
         $provider = $this->resolveProvider($request);
-        if (!$provider) return response()->json(['error' => 'Provider profile not found'], 404);
+        if (!$provider) return response()->json(['error' => 'An approved provider account is required.'], 403);
 
         $appointment = Appointment::where('_id', $id)
             ->where('provider_id', (string) $provider->_id)
             ->first();
 
         if (!$appointment) return response()->json(['error' => 'Appointment not found'], 404);
+
+        // Completing creates an escrow entry, so it must happen exactly once and
+        // only for a consultation that was actually scheduled.
+        if (!in_array($appointment->status, ['confirmed', 'in-progress'], true)) {
+            return response()->json(['error' => "Only confirmed appointments can be completed (this one is {$appointment->status})."], 422);
+        }
+        if (Transaction::where('appointment_id', (string) $appointment->_id)->exists()) {
+            return response()->json(['error' => 'This consultation has already been billed.'], 409);
+        }
 
         $appointment->update(['status' => 'completed']);
 
@@ -478,7 +537,7 @@ class ProviderController extends Controller
 
         // Funds go into ESCROW — admin must release them after the case is resolved/closed.
         Transaction::create([
-            'transaction_id' => 'TRX-' . rand(1000, 9999),
+            'transaction_id' => $this->publicId('TRX'),
             'provider_id'    => (string) $provider->_id,
             'client_name'    => $appointment->citizen_name,
             'petition_id'    => $linkedPetition ? (string) $linkedPetition->_id : ($appointment->petition_id ?? null),
@@ -524,7 +583,7 @@ class ProviderController extends Controller
     public function deleteTransaction(Request $request, $id)
     {
         $provider = $this->resolveProvider($request);
-        if (!$provider) return response()->json(['error' => 'Provider profile not found'], 404);
+        if (!$provider) return response()->json(['error' => 'An approved provider account is required.'], 403);
 
         $transaction = Transaction::where('_id', $id)
             ->where('provider_id', (string) $provider->_id)
@@ -543,11 +602,14 @@ class ProviderController extends Controller
 
     // ── Helper ───────────────────────────────────────────────────
 
+    /** The signed-in provider's profile, only once an admin has approved it. */
     private function resolveProvider(Request $request): ?Provider
     {
         $uid  = $request->firebase_uid;
-        $user = User::where('firebase_uid', $uid)->first();
+        $user = User::where('firebase_uid', $uid)->where('role', 'provider')->first();
         if (!$user) return null;
-        return Provider::where('user_id', (string) $user->_id)->first();
+        return Provider::where('user_id', (string) $user->_id)
+            ->where('status', 'approved')
+            ->first();
     }
 }

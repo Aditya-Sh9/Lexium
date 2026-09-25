@@ -1,18 +1,10 @@
 import { useState, useEffect } from 'react';
-import { Calendar, Star, Clock, MapPin, ChevronRight, X, RefreshCw, Ban, Briefcase, MessageCircle, CheckCircle2, Archive } from 'lucide-react';
+import { Calendar, Star, Clock, MapPin, ChevronRight, X, RefreshCw, Ban, Briefcase, MessageCircle } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { Link } from 'react-router';
 import { motion, AnimatePresence } from 'framer-motion';
 import api from '../../services/api';
 import { themeToast, themeAlert } from '../../utils/alert';
-
-const STATUS_PILL = {
-  pending:              'bg-yellow-100 text-yellow-700',
-  'under-review':       'bg-blue-100 text-blue-700',
-  'in-progress':        'bg-indigo-100 text-indigo-700',
-  'awaiting-documents': 'bg-orange-100 text-orange-700',
-  accepted:             'bg-blue-100 text-blue-700',
-};
 
 function timeAgo(iso) {
   if (!iso) return '';
@@ -400,7 +392,7 @@ export default function CitizenDashboard() {
               <div className="space-y-4">
                 <div>
                   <label className="block text-sm font-medium text-surface-700 mb-1">New Date</label>
-                  <input type="date" value={rescheduleDate} onChange={e => setRescheduleDate(e.target.value)} min={new Date().toISOString().split('T')[0]}
+                  <input type="date" value={rescheduleDate} onChange={e => setRescheduleDate(e.target.value)} min={new Date().toLocaleDateString('en-CA')}
                     className="w-full px-4 py-3 bg-surface-50 border border-surface-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500/30" />
                 </div>
                 <div>

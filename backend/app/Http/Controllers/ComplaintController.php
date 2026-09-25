@@ -127,6 +127,10 @@ class ComplaintController extends Controller
         $petition    = !empty($validated['petition_id']) ? Petition::find($validated['petition_id']) : null;
         $appointment = !empty($validated['appointment_id']) ? Appointment::find($validated['appointment_id']) : null;
 
+        if ((!empty($validated['petition_id']) && !$petition) || (!empty($validated['appointment_id']) && !$appointment)) {
+            return response()->json(['error' => 'The case or appointment could not be found.'], 404);
+        }
+
         // If no petition was passed but the appointment has one, follow the link.
         if (!$petition && $appointment && !empty($appointment->petition_id)) {
             $petition = Petition::find($appointment->petition_id);
@@ -151,6 +155,13 @@ class ComplaintController extends Controller
         $transaction = null;
         if (!empty($validated['transaction_id'])) {
             $transaction = Transaction::find($validated['transaction_id']);
+            // Must belong to the same provider and, when known, the same case.
+            $belongs = $transaction
+                && (string) $transaction->provider_id === (string) $providerId
+                && (!$petition || (string) $transaction->petition_id === (string) $petition->_id);
+            if (!$belongs) {
+                return response()->json(['error' => 'That payment is not linked to this case.'], 422);
+            }
         } elseif ($petition) {
             $transaction = Transaction::where('petition_id', (string) $petition->_id)
                 ->orderBy('created_at', 'desc')
@@ -174,7 +185,7 @@ class ComplaintController extends Controller
         }
 
         $complaint = Complaint::create([
-            'complaint_id'     => 'CMP-' . rand(1000, 9999),
+            'complaint_id'     => $this->publicId('CMP'),
             'citizen_id'       => (string) $user->_id,
             'citizen_name'     => $user->name,
             'provider_id'      => (string) $providerId,
@@ -205,6 +216,6 @@ class ComplaintController extends Controller
 
     private function resolveUser(Request $request): ?User
     {
-        return User::where('firebase_uid', $request->firebase_uid)->first();
+        return User::where('firebase_uid', $request->firebase_uid)->where('role', 'citizen')->first();
     }
 }

@@ -28,6 +28,24 @@ return [
         'region' => env('AWS_DEFAULT_REGION', 'us-east-1'),
     ],
 
+    'firebase' => [
+        // Production: base64-encoded service-account JSON. Local: path to the JSON file.
+        'credentials_json' => env('FIREBASE_CREDENTIALS_JSON'),
+        'credentials'      => env('FIREBASE_CREDENTIALS', 'firebase_credentials.json'),
+        // Bypasses token verification — only honoured when APP_ENV=local.
+        'mock_auth'        => (bool) env('MOCK_AUTH', false),
+    ],
+
+    'contact' => [
+        // Inbox that receives Contact-form messages from the public site.
+        'to' => env('CONTACT_RECIPIENT', 'adityasharma.reach@gmail.com'),
+    ],
+
+    'admin' => [
+        // Hours an admin session token stays valid.
+        'token_ttl_hours' => (int) env('ADMIN_TOKEN_TTL_HOURS', 12),
+    ],
+
     'slack' => [
         'notifications' => [
             'bot_user_oauth_token' => env('SLACK_BOT_USER_OAUTH_TOKEN'),

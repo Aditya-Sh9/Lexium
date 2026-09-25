@@ -48,3 +48,22 @@ export const categories = [
     color: 'bg-cyan-50 text-cyan-700 border-cyan-200',
   },
 ];
+
+const byId = Object.fromEntries(categories.map((c) => [c.id, c]));
+
+/**
+ * Normalises any stored service type — "advocate", "Advocate",
+ * "Document Writer", "document_writer" — to its category id.
+ */
+export function toCategoryId(value) {
+  const slug = String(value || '').trim().toLowerCase().replace(/[\s_]+/g, '-');
+  if (byId[slug]) return slug;
+  if (slug === 'notary-public') return 'notary';
+  return slug;
+}
+
+/** Human label for a stored service type, e.g. "document-writer" → "Document Writer". */
+export function categoryLabel(value) {
+  const id = toCategoryId(value);
+  return byId[id]?.name || value || '';
+}

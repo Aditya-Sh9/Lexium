@@ -6,6 +6,7 @@ import {
 } from 'lucide-react';
 import { themeToast, themeAlert } from '../../utils/alert';
 import { formatRupees } from '../../utils/formatters';
+import { adminFetch } from '../../services/adminApi';
 
 const API = import.meta.env.VITE_API_URL || 'http://localhost:8000/api';
 
@@ -73,7 +74,7 @@ export default function AdminComplaints() {
 
   const fetchData = () => {
     setLoading(true);
-    fetch(`${API}/admin/complaints`, { headers: { Authorization: `Bearer ${token}` } })
+    adminFetch(`${API}/admin/complaints`, { headers: { Authorization: `Bearer ${token}` } })
       .then(r => r.json())
       .then(d => setData({
         complaints: d.complaints || [],
@@ -248,7 +249,7 @@ function ComplaintDetail({ id, onClose, onChanged }) {
 
   const load = () => {
     setLoading(true);
-    fetch(`${API}/admin/complaints/${id}`, { headers })
+    adminFetch(`${API}/admin/complaints/${id}`, { headers })
       .then(r => r.json())
       .then(d => {
         setDetail(d);
@@ -259,7 +260,7 @@ function ComplaintDetail({ id, onClose, onChanged }) {
   };
 
   const loadRisk = (providerId) => {
-    fetch(`${API}/admin/providers/${providerId}/complaint-history`, { headers })
+    adminFetch(`${API}/admin/providers/${providerId}/complaint-history`, { headers })
       .then(r => r.json())
       .then(setRisk)
       .catch(() => setRisk(null));
@@ -270,7 +271,7 @@ function ComplaintDetail({ id, onClose, onChanged }) {
   const post = async (path, body) => {
     setWorking(true);
     try {
-      const res = await fetch(`${API}/admin/complaints/${id}${path}`, {
+      const res = await adminFetch(`${API}/admin/complaints/${id}${path}`, {
         method: 'POST',
         headers,
         body: body ? JSON.stringify(body) : undefined,
@@ -291,7 +292,7 @@ function ComplaintDetail({ id, onClose, onChanged }) {
   const put = async (path, body) => {
     setWorking(true);
     try {
-      const res = await fetch(`${API}/admin/complaints/${id}${path}`, {
+      const res = await adminFetch(`${API}/admin/complaints/${id}${path}`, {
         method: 'PUT',
         headers,
         body: JSON.stringify(body),
@@ -332,7 +333,7 @@ function ComplaintDetail({ id, onClose, onChanged }) {
   const clearNotice = async (noticeId) => {
     setWorking(true);
     try {
-      const res = await fetch(`${API}/admin/notices/${noticeId}/clear`, { method: 'POST', headers });
+      const res = await adminFetch(`${API}/admin/notices/${noticeId}/clear`, { method: 'POST', headers });
       const j = await res.json();
       if (!res.ok) throw new Error(j.error || 'Failed');
       themeToast.success('Notice cleared.');
@@ -347,7 +348,7 @@ function ComplaintDetail({ id, onClose, onChanged }) {
   const archiveNotice = async (noticeId) => {
     setWorking(true);
     try {
-      const res = await fetch(`${API}/admin/notices/${noticeId}/archive`, { method: 'POST', headers });
+      const res = await adminFetch(`${API}/admin/notices/${noticeId}/archive`, { method: 'POST', headers });
       const j = await res.json();
       if (!res.ok) throw new Error(j.error || 'Failed');
       themeToast.success('Notice archived.');
@@ -371,7 +372,7 @@ function ComplaintDetail({ id, onClose, onChanged }) {
 
     setWorking(true);
     try {
-      const res = await fetch(`${API}/admin/providers/${detail.complaint.provider_id}/notices/clear-all`, { method: 'POST', headers });
+      const res = await adminFetch(`${API}/admin/providers/${detail.complaint.provider_id}/notices/clear-all`, { method: 'POST', headers });
       const j = await res.json();
       if (!res.ok) throw new Error(j.error || 'Failed');
       themeToast.success(j.message || 'All notices cleared.');

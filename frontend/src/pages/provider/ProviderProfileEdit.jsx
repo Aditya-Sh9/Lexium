@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { User, MapPin, Briefcase, Camera, Save, X } from 'lucide-react';
 import api from '../../services/api';
+import { Link } from 'react-router';
 
 export default function ProviderProfileEdit() {
   const { user } = useAuth();
@@ -68,7 +69,7 @@ export default function ProviderProfileEdit() {
       });
       setMessage('Profile updated successfully.');
     } catch (error) {
-      setMessage('Failed to update profile.');
+      setMessage(error.message || 'Failed to update profile.');
     } finally {
       setSaving(false);
     }
@@ -127,10 +128,10 @@ export default function ProviderProfileEdit() {
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
           <div>
-            <label className="block text-xs font-sans uppercase tracking-widest font-bold text-surface-600 mb-1.5">Given Name</label>
+            <label htmlFor="pe-name" className="block text-xs font-sans uppercase tracking-widest font-bold text-surface-600 mb-1.5">Name (verified)</label>
             <div className="relative">
-              <User size={18} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-surface-400" />
-              <input name="name" value={formData.name} onChange={handleChange} className={inputClass} />
+              <User size={18} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-surface-400" aria-hidden="true" />
+              <input id="pe-name" name="name" value={formData.name} disabled aria-describedby="pe-locked-hint" className={`${inputClass} bg-surface-100 text-surface-500 cursor-not-allowed`} />
             </div>
           </div>
           <div>
@@ -141,22 +142,27 @@ export default function ProviderProfileEdit() {
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
           <div>
-            <label className="block text-xs font-sans uppercase tracking-widest font-bold text-surface-600 mb-1.5">Practitioner Class</label>
+            <label htmlFor="pe-type" className="block text-xs font-sans uppercase tracking-widest font-bold text-surface-600 mb-1.5">Practice type (verified)</label>
             <div className="relative">
-              <Briefcase size={18} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-surface-400" />
-              <select name="service_type" value={formData.service_type} onChange={handleChange} className={`${inputClass} appearance-none cursor-pointer`}>
+              <Briefcase size={18} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-surface-400" aria-hidden="true" />
+              <select id="pe-type" name="service_type" value={formData.service_type} disabled aria-describedby="pe-locked-hint" className={`${inputClass} bg-surface-100 text-surface-500 cursor-not-allowed appearance-none`}>
                 <option value="advocate">Advocate</option>
                 <option value="mediator">Mediator</option>
                 <option value="arbitrator">Arbitrator</option>
                 <option value="notary">Notary Public</option>
+                <option value="document-writer">Document Writer</option>
+                <option value="tax-consultant">Tax Consultant</option>
               </select>
             </div>
           </div>
           <div>
-            <label className="block text-xs font-sans uppercase tracking-widest font-bold text-surface-600 mb-1.5">Sovereign Registry ID</label>
-            <input name="bar_council_id" value={formData.bar_council_id} disabled className={`${inputClass} bg-surface-100 text-surface-500 cursor-not-allowed font-mono`} />
+            <label htmlFor="pe-enrol" className="block text-xs font-sans uppercase tracking-widest font-bold text-surface-600 mb-1.5">Enrolment / registration no. (verified)</label>
+            <input id="pe-enrol" name="bar_council_id" value={formData.bar_council_id} disabled aria-describedby="pe-locked-hint" className={`${inputClass} bg-surface-100 text-surface-500 cursor-not-allowed font-mono`} />
           </div>
         </div>
+        <p id="pe-locked-hint" className="-mt-3 mb-6 text-xs text-surface-500">
+          Verified details were checked when your application was approved. To change them, <Link to="/contact" className="font-medium text-primary-800 underline underline-offset-2">contact support</Link>.
+        </p>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
           <div>

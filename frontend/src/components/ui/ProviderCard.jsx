@@ -2,6 +2,7 @@ import { Link } from 'react-router';
 import { MapPin, Briefcase, Star, ArrowRight, CheckCircle2 } from 'lucide-react';
 import { getInitials } from '../../utils/helpers';
 import { formatPriceRange } from '../../utils/formatters';
+import { categoryLabel } from '../../data/categories';
 
 /**
  * ProviderCard — displays a provider summary in listings
@@ -26,7 +27,7 @@ export default function ProviderCard({ provider }) {
   } = provider;
 
   const providerId = _id || id;
-  const displayType = service_type || serviceType;
+  const displayType = categoryLabel(service_type || serviceType);
   const displayReviewCount = review_count || reviewCount || 0;
   const displayPrice = price_range || priceRange || '';
 

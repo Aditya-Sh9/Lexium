@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router';
-import { Users, UserCheck, Clock, Calendar, FileText, TrendingUp, ChevronRight, Trophy, Star, Award, MapPin, Briefcase, UserX, Lock } from 'lucide-react';
+import { Users, UserCheck, Clock, Calendar, FileText, TrendingUp, ChevronRight, Trophy, Star, MapPin, Briefcase, UserX, Lock } from 'lucide-react';
 import { themeToast, themeAlert } from '../../utils/alert';
 import { formatRupees } from '../../utils/formatters';
+import { adminFetch } from '../../services/adminApi';
 
 const API = import.meta.env.VITE_API_URL || 'http://localhost:8000/api';
 
@@ -16,8 +17,8 @@ export default function AdminDashboard() {
   const fetchDashboard = () => {
     setLoading(true);
     Promise.all([
-      fetch(`${API}/admin/dashboard`,    { headers: { Authorization: `Bearer ${token}` } }).then(r => r.json()),
-      fetch(`${API}/admin/escrow`,       { headers: { Authorization: `Bearer ${token}` } }).then(r => r.json()).catch(() => null),
+      adminFetch(`${API}/admin/dashboard`,    { headers: { Authorization: `Bearer ${token}` } }).then(r => r.json()),
+      adminFetch(`${API}/admin/escrow`,       { headers: { Authorization: `Bearer ${token}` } }).then(r => r.json()).catch(() => null),
     ])
       .then(([d, e]) => {
         setData(d);
@@ -32,7 +33,7 @@ export default function AdminDashboard() {
   const approveProvider = async (id) => {
     setActionLoading(id);
     try {
-      const res = await fetch(`${API}/admin/providers/${id}/approve`, {
+      const res = await adminFetch(`${API}/admin/providers/${id}/approve`, {
         method: 'POST',
         headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
       });
@@ -61,7 +62,7 @@ export default function AdminDashboard() {
 
     setActionLoading(id);
     try {
-      const res = await fetch(`${API}/admin/providers/${id}/reject`, {
+      const res = await adminFetch(`${API}/admin/providers/${id}/reject`, {
         method: 'POST',
         headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
         body: JSON.stringify({ reason: 'Application does not meet requirements' }),

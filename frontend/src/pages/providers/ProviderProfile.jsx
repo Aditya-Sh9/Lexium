@@ -6,6 +6,7 @@ import Badge from '../../components/ui/Badge';
 import api from '../../services/api';
 import { getInitials, formatDate } from '../../utils/helpers';
 import { formatRupees, formatPriceRange, formatDuration } from '../../utils/formatters';
+import { categoryLabel } from '../../data/categories';
 
 export default function ProviderProfile() {
   const { id } = useParams();
@@ -49,7 +50,7 @@ export default function ProviderProfile() {
   }
 
   const { name, initials, service_type, serviceType, specialization, rating, review_count, reviewCount, price_range, priceRange, location, experience, bio, badges, languages, qualifications, services, reviews } = provider;
-  const displayServiceType = service_type || serviceType;
+  const displayServiceType = categoryLabel(service_type || serviceType);
   const displayReviewCount = review_count || reviewCount || 0;
   const displayPriceRange = price_range || priceRange || '';
 

@@ -3,6 +3,7 @@ import { useSearchParams } from 'react-router';
 import { UserCheck, UserX, Clock, MapPin, Briefcase, Calendar, ChevronDown, Trash2 } from 'lucide-react';
 import { themeToast } from '../../utils/alert';
 import { formatPriceRange, formatRupees } from '../../utils/formatters';
+import { adminFetch } from '../../services/adminApi';
 
 const API = import.meta.env.VITE_API_URL || 'http://localhost:8000/api';
 
@@ -29,7 +30,7 @@ export default function AdminProviders() {
   const fetchProviders = async (status) => {
     setLoading(true);
     try {
-      const res = await fetch(`${API}/admin/providers?status=${status}`, {
+      const res = await adminFetch(`${API}/admin/providers?status=${status}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       const data = await res.json();
@@ -55,7 +56,7 @@ export default function AdminProviders() {
   const approveProvider = async (id) => {
     setActionLoading(id);
     try {
-      await fetch(`${API}/admin/providers/${id}/approve`, {
+      await adminFetch(`${API}/admin/providers/${id}/approve`, {
         method: 'POST',
         headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
       });
@@ -68,7 +69,7 @@ export default function AdminProviders() {
   const rejectProvider = async (id) => {
     setActionLoading(id);
     try {
-      await fetch(`${API}/admin/providers/${id}/reject`, {
+      await adminFetch(`${API}/admin/providers/${id}/reject`, {
         method: 'POST',
         headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
         body: JSON.stringify({ reason: rejectReason || 'Application does not meet requirements' }),
@@ -84,7 +85,7 @@ export default function AdminProviders() {
   const handleDelete = async (id) => {
     setDeleting(true);
     try {
-      const res = await fetch(`${API}/admin/providers/${id}`, {
+      const res = await adminFetch(`${API}/admin/providers/${id}`, {
         method: 'DELETE',
         headers: { Authorization: `Bearer ${token}` }
       });

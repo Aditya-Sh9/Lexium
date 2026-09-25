@@ -1,5 +1,5 @@
 import { useAuth } from '../../context/AuthContext';
-import { Scale, XCircle } from 'lucide-react';
+import { XCircle } from 'lucide-react';
 import { useNavigate } from 'react-router';
 
 export default function RejectedApplication() {

@@ -6,18 +6,25 @@ use App\Http\Controllers\CitizenController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\AdminController;
 use App\Http\Controllers\ComplaintController;
+use App\Http\Controllers\ContactController;
 use App\Http\Middleware\AdminAuthMiddleware;
 
 // ── Public routes ────────────────────────────────────────────────
-Route::get('/providers', [ProviderController::class, 'index']);
-Route::get('/providers/{id}', [ProviderController::class, 'show']);
-Route::get('/categories', [ProviderController::class, 'categories']);
+Route::middleware('throttle:public-api')->group(function () {
+    Route::get('/providers', [ProviderController::class, 'index']);
+    Route::get('/providers/{id}', [ProviderController::class, 'show']);
+    Route::get('/categories', [ProviderController::class, 'categories']);
+    Route::get('/leaderboard', [ProviderController::class, 'leaderboard']);
+});
+
+// Contact form — emailed to the support inbox (services.contact.to).
+Route::post('/contact', [ContactController::class, 'store'])->middleware('throttle:contact');
 
 // ── Admin Auth (bypasses Firebase — direct MongoDB check) ────────
-Route::post('/admin/login', [AuthController::class, 'adminLogin']);
+Route::post('/admin/login', [AuthController::class, 'adminLogin'])->middleware('throttle:admin-login');
 
 // ── Firebase Protected Routes ────────────────────────────────────
-Route::middleware('firebase.auth')->group(function () {
+Route::middleware(['firebase.auth', 'throttle:authenticated'])->group(function () {
 
     // Auth Synchronization & Status
     Route::post('/auth/sync', [AuthController::class, 'sync']);
@@ -71,7 +78,8 @@ Route::middleware('firebase.auth')->group(function () {
 });
 
 // ── Admin Routes (protected by admin token check) ────────────────
-Route::middleware([AdminAuthMiddleware::class])->prefix('admin')->group(function () {
+Route::middleware([AdminAuthMiddleware::class, 'throttle:authenticated'])->prefix('admin')->group(function () {
+    Route::post('/logout',                    [AuthController::class, 'adminLogout']);
     Route::get('/dashboard',                  [AdminController::class, 'dashboard']);
     Route::get('/providers',                  [AdminController::class, 'providers']);
     Route::get('/providers/{id}/stats',       [AdminController::class, 'providerStats']);
@@ -103,5 +111,3 @@ Route::middleware([AdminAuthMiddleware::class])->prefix('admin')->group(function
     Route::post('/providers/{id}/notices/clear-all',         [AdminController::class, 'clearAllProviderNotices']);
 });
 
-// ── Public Leaderboard (accessible by provider dashboards) ───────
-Route::get('/leaderboard', [AdminController::class, 'leaderboard']);

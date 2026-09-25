@@ -92,6 +92,25 @@ class Provider extends Model
         return $this->hasMany(Transaction::class, 'provider_id');
     }
 
+    /** Canonical service-type ids — the frontend filters on exactly these. */
+    public const SERVICE_TYPES = ['advocate', 'mediator', 'arbitrator', 'notary', 'document-writer', 'tax-consultant'];
+
+    /**
+     * Store service_type as its canonical id, whatever form it arrives in
+     * ("Advocate", "Document Writer", "notary public" → "advocate", ...).
+     */
+    public function setServiceTypeAttribute($value): void
+    {
+        $this->attributes['service_type'] = self::normalizeServiceType($value);
+    }
+
+    public static function normalizeServiceType($value): ?string
+    {
+        if ($value === null || $value === '') return $value;
+        $slug = strtolower(trim(preg_replace('/[\s_]+/', '-', (string) $value)));
+        return $slug === 'notary-public' ? 'notary' : $slug;
+    }
+
     /**
      * Scope to only approved providers.
      */

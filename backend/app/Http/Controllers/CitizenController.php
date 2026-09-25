@@ -16,7 +16,7 @@ class CitizenController extends Controller
     public function dashboard(Request $request)
     {
         $user = $this->resolveUser($request);
-        if (!$user) return response()->json(['error' => 'User not found'], 404);
+        if (!$user) return response()->json(['error' => 'A citizen account is required.'], 403);
 
         $upcomingAppointments = Appointment::where('citizen_id', (string) $user->_id)
             ->whereIn('status', ['pending', 'confirmed'])
@@ -71,7 +71,7 @@ class CitizenController extends Controller
     public function petitions(Request $request)
     {
         $user = $this->resolveUser($request);
-        if (!$user) return response()->json(['error' => 'User not found'], 404);
+        if (!$user) return response()->json(['error' => 'A citizen account is required.'], 403);
 
         $petitions = Petition::where('citizen_id', (string) $user->_id)
             ->orderBy('created_at', 'desc')
@@ -86,29 +86,27 @@ class CitizenController extends Controller
     public function createPetition(Request $request)
     {
         $user = $this->resolveUser($request);
-        if (!$user) return response()->json(['error' => 'User not found'], 404);
+        if (!$user) return response()->json(['error' => 'A citizen account is required.'], 403);
 
         $validated = $request->validate([
             'provider_id'    => 'required|string',
-            'type'           => 'required|string',
-            'details'        => 'required|string|min:10',
+            'type'           => 'required|string|max:120',
+            'details'        => 'required|string|min:10|max:5000',
             'urgency'        => 'nullable|in:normal,high,urgent',
-            'preferred_date' => 'nullable|string',
-            'preferred_time' => 'nullable|string',
-            'quoted_price'   => 'nullable|numeric|min:0',
+            'preferred_date' => 'nullable|date_format:Y-m-d|after_or_equal:today',
+            'preferred_time' => 'nullable|string|max:20',
         ]);
 
-        $provider = Provider::find($validated['provider_id']);
-        if (!$provider) return response()->json(['error' => 'Provider not found'], 404);
+        $provider = $this->bookableProvider($validated['provider_id']);
+        if (!$provider) return response()->json(['error' => 'This provider is not available for booking.'], 404);
 
-        // Resolve quoted price: explicit > matched service > default consultation fee
-        $quotedPrice = isset($validated['quoted_price']) ? (float) $validated['quoted_price'] : null;
-        if ($quotedPrice === null) {
-            foreach (($provider->services ?? []) as $svc) {
-                if (($svc['name'] ?? null) === $validated['type']) {
-                    $quotedPrice = (float) preg_replace('/[^\d.]/', '', (string) ($svc['price'] ?? '')) ?: null;
-                    break;
-                }
+        // The price is always resolved server-side from the provider's published
+        // services — a client-supplied amount would flow straight into escrow.
+        $quotedPrice = null;
+        foreach (($provider->services ?? []) as $svc) {
+            if (($svc['name'] ?? null) === $validated['type']) {
+                $quotedPrice = (float) preg_replace('/[^\d.]/', '', (string) ($svc['price'] ?? '')) ?: null;
+                break;
             }
         }
         if ($quotedPrice === null) {
@@ -130,7 +128,7 @@ class CitizenController extends Controller
         }
 
         $petition = Petition::create([
-            'petition_id'    => 'PET-' . rand(1000, 9999),
+            'petition_id'    => $this->publicId('PET'),
             'citizen_id'     => (string) $user->_id,
             'citizen_name'   => $user->name,
             'provider_id'    => $validated['provider_id'],
@@ -159,7 +157,7 @@ class CitizenController extends Controller
     public function withdrawPetition(Request $request, string $id)
     {
         $user = $this->resolveUser($request);
-        if (!$user) return response()->json(['error' => 'User not found'], 404);
+        if (!$user) return response()->json(['error' => 'A citizen account is required.'], 403);
 
         $petition = Petition::where('_id', $id)
             ->where('citizen_id', (string) $user->_id)
@@ -181,18 +179,18 @@ class CitizenController extends Controller
     public function createAppointment(Request $request)
     {
         $user = $this->resolveUser($request);
-        if (!$user) return response()->json(['error' => 'User not found'], 404);
+        if (!$user) return response()->json(['error' => 'A citizen account is required.'], 403);
 
         $validated = $request->validate([
             'provider_id'      => 'required|string',
-            'date'             => 'required|string',
-            'time'             => 'required|string',
-            'type'             => 'required|string',
-            'case_description' => 'nullable|string',
+            'date'             => 'required|date_format:Y-m-d|after_or_equal:today',
+            'time'             => 'required|string|max:20',
+            'type'             => 'required|string|max:120',
+            'case_description' => 'nullable|string|max:5000',
         ]);
 
-        $provider = Provider::find($validated['provider_id']);
-        if (!$provider) return response()->json(['error' => 'Provider not found'], 404);
+        $provider = $this->bookableProvider($validated['provider_id']);
+        if (!$provider) return response()->json(['error' => 'This provider is not available for booking.'], 404);
 
         $appointment = Appointment::create([
             'citizen_id'    => (string) $user->_id,
@@ -216,11 +214,11 @@ class CitizenController extends Controller
     public function rescheduleAppointment(Request $request, string $id)
     {
         $user = $this->resolveUser($request);
-        if (!$user) return response()->json(['error' => 'User not found'], 404);
+        if (!$user) return response()->json(['error' => 'A citizen account is required.'], 403);
 
         $validated = $request->validate([
-            'date' => 'required|string',
-            'time' => 'required|string',
+            'date' => 'required|date_format:Y-m-d|after_or_equal:today',
+            'time' => 'required|string|max:20',
         ]);
 
         $appointment = Appointment::where('_id', $id)
@@ -228,8 +226,8 @@ class CitizenController extends Controller
             ->first();
 
         if (!$appointment) return response()->json(['error' => 'Appointment not found'], 404);
-        if ($appointment->status === 'completed') {
-            return response()->json(['error' => 'Cannot reschedule a completed appointment'], 422);
+        if (in_array($appointment->status, ['completed', 'cancelled', 'declined'], true)) {
+            return response()->json(['error' => "A {$appointment->status} appointment can't be rescheduled. Book a new one instead."], 422);
         }
 
         $appointment->update([
@@ -247,15 +245,15 @@ class CitizenController extends Controller
     public function cancelAppointment(Request $request, string $id)
     {
         $user = $this->resolveUser($request);
-        if (!$user) return response()->json(['error' => 'User not found'], 404);
+        if (!$user) return response()->json(['error' => 'A citizen account is required.'], 403);
 
         $appointment = Appointment::where('_id', $id)
             ->where('citizen_id', (string) $user->_id)
             ->first();
 
         if (!$appointment) return response()->json(['error' => 'Appointment not found'], 404);
-        if ($appointment->status === 'completed') {
-            return response()->json(['error' => 'Cannot cancel a completed appointment'], 422);
+        if (in_array($appointment->status, ['completed', 'cancelled', 'declined'], true)) {
+            return response()->json(['error' => "This appointment is already {$appointment->status}."], 422);
         }
 
         $appointment->update(['status' => 'cancelled']);
@@ -268,7 +266,7 @@ class CitizenController extends Controller
     public function history(Request $request)
     {
         $user = $this->resolveUser($request);
-        if (!$user) return response()->json(['error' => 'User not found'], 404);
+        if (!$user) return response()->json(['error' => 'A citizen account is required.'], 403);
 
         $history = Appointment::where('citizen_id', (string) $user->_id)
             ->whereIn('status', ['completed', 'cancelled'])
@@ -285,7 +283,7 @@ class CitizenController extends Controller
     public function submitReview(Request $request, string $id)
     {
         $user = $this->resolveUser($request);
-        if (!$user) return response()->json(['error' => 'User not found'], 404);
+        if (!$user) return response()->json(['error' => 'A citizen account is required.'], 403);
 
         $appointment = Appointment::where('_id', $id)
             ->where('citizen_id', (string) $user->_id)
@@ -309,7 +307,7 @@ class CitizenController extends Controller
 
         // Build the review entry
         $newReview = [
-            'id'     => 'REV-' . rand(10000, 99999),
+            'id'     => $this->publicId('REV'),
             'author' => $user->name,
             'rating' => (int) $validated['rating'],
             'date'   => now()->toDateString(),
@@ -343,8 +341,18 @@ class CitizenController extends Controller
 
     // ── Helper ───────────────────────────────────────────────────
 
+    /** The signed-in user, only if they hold a citizen account. */
     private function resolveUser(Request $request): ?User
     {
-        return User::where('firebase_uid', $request->firebase_uid)->first();
+        return User::where('firebase_uid', $request->firebase_uid)
+            ->where('role', 'citizen')
+            ->first();
+    }
+
+    /** Only approved (verified) providers can receive bookings. */
+    private function bookableProvider(string $id): ?Provider
+    {
+        $provider = Provider::find($id);
+        return $provider && $provider->status === 'approved' ? $provider : null;
     }
 }

@@ -23,12 +23,14 @@ class User extends Model
         'status',            // 'active' (citizen/admin), 'pending', 'approved', 'rejected' (provider)
         'password_hash',     // Only used for admin (bypasses Firebase)
         'rejection_reason',
-        'admin_token',       // Session token for admin auth
+        'admin_token',       // SHA-256 hash of the admin session token
+        'admin_token_expires_at',
     ];
 
     protected $hidden = [
         'password_hash',
         'admin_token',
+        'admin_token_expires_at',
         'remember_token',
     ];
 
